@@ -1,0 +1,1781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>割草大作战 - Ultimate Grass Mower Roguelike</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            overflow: hidden;
+            background-color: #0f172a;
+        }
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .card-hover {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 10px 25px -5px rgba(34, 197, 94, 0.4);
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #22c55e;
+            border-radius: 3px;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+        .animate-pulse-glow {
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen relative select-none text-white">
+
+    <!-- HUD Layer -->
+    <div id="game-hud" class="absolute inset-0 pointer-events-none z-10 hidden flex flex-col justify-between p-4">
+        <!-- Top Bar: EXP, Stats, Wave Time -->
+        <div class="w-full flex flex-col gap-2">
+            <!-- Level & EXP Bar -->
+            <div class="flex items-center gap-3">
+                <span id="hud-level" class="bg-emerald-600 font-black px-3 py-1 rounded-full text-sm shadow-md border border-emerald-400">LV.1</span>
+                <div class="flex-1 h-4 bg-slate-800/80 rounded-full overflow-hidden border border-slate-600 relative">
+                    <div id="hud-exp-bar" class="h-full bg-gradient-to-r from-emerald-500 to-lime-400 w-0 transition-all duration-200"></div>
+                    <span id="hud-exp-text" class="absolute inset-0 text-xs font-bold flex items-center justify-center drop-shadow">0 / 100</span>
+                </div>
+            </div>
+
+            <!-- Top Header Stats -->
+            <div class="flex justify-between items-center text-xs font-bold text-slate-200 glass-panel px-4 py-2 rounded-xl">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-clock text-amber-400 text-sm"></i>
+                    <span id="hud-time">00:00</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-scissors text-emerald-400 text-sm"></i>
+                    <span id="hud-kills">已割草: 0</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-coins text-yellow-400 text-sm"></i>
+                    <span id="hud-coins">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Boss HP Bar (Hidden by default) -->
+        <div id="boss-hp-container" class="w-2/3 mx-auto hidden flex-col items-center gap-1">
+            <span id="boss-name" class="text-xs font-bold text-red-400 tracking-wider">变异草王 Boss</span>
+            <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-red-500 shadow-lg">
+                <div id="boss-hp-bar" class="h-full bg-gradient-to-r from-red-600 to-amber-500 w-full transition-all duration-100"></div>
+            </div>
+        </div>
+
+        <!-- Bottom Controls Bar & Health -->
+        <div class="w-full flex justify-between items-end">
+            <!-- Health Bar -->
+            <div class="w-48 sm:w-64 glass-panel p-2.5 rounded-2xl border border-slate-700/60 flex flex-col gap-1">
+                <div class="flex justify-between text-xs font-bold">
+                    <span class="text-red-400"><i class="fa-solid fa-heart mr-1"></i>切割机耐久度</span>
+                    <span id="hud-hp-text">100/100</span>
+                </div>
+                <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                    <div id="hud-hp-bar" class="h-full bg-gradient-to-r from-red-500 to-emerald-400 w-full transition-all duration-150"></div>
+                </div>
+            </div>
+
+            <!-- Pause Button -->
+            <button id="btn-pause" class="pointer-events-auto bg-slate-800/80 hover:bg-slate-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-lg border border-slate-600 shadow-lg active:scale-95 transition">
+                <i class="fa-solid fa-pause"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Virtual Touch Joystick (Mobile) -->
+    <div id="joystick-zone" class="absolute inset-0 pointer-events-auto z-0 hidden">
+        <div id="joystick-base" class="absolute w-28 h-28 rounded-full bg-white/10 border-2 border-white/30 hidden -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+            <div id="joystick-stick" class="absolute w-12 h-12 rounded-full bg-emerald-500/80 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border border-emerald-300 shadow-md"></div>
+        </div>
+    </div>
+
+    <!-- Main Menu Screen -->
+    <div id="screen-menu" class="absolute inset-0 z-20 flex flex-col items-center justify-between p-6 bg-gradient-to-b from-slate-900 via-emerald-950 to-slate-950 overflow-y-auto">
+        <!-- Title Banner -->
+        <div class="flex flex-col items-center mt-8 text-center">
+            <div class="inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-4 py-1.5 rounded-full text-xs font-semibold mb-4 animate-pulse-glow">
+                <i class="fa-solid fa-leaf"></i> 极爽无双割草 Roguelike
+            </div>
+            <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-lime-300 to-yellow-400 drop-shadow-lg">
+                割草大作战
+            </h1>
+            <p class="text-slate-400 text-sm mt-2 max-w-sm">操控重型割草机器，清理无尽杂草与变异植物！体验成片收割与技能组合的解压快乐！</p>
+        </div>
+
+        <!-- Mower Machine Selection Wheel -->
+        <div class="w-full max-w-md my-6">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 text-center">选择你的割草战车</h2>
+            <div class="grid grid-cols-3 gap-3" id="mower-select-container">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- Start & Garage Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 w-full max-w-xs mb-8">
+            <button id="btn-start-game" class="flex-1 bg-gradient-to-r from-emerald-500 to-lime-500 hover:from-emerald-400 hover:to-lime-400 text-slate-950 font-black py-4 px-6 rounded-2xl shadow-xl shadow-emerald-900/40 text-lg flex items-center justify-center gap-2 active:scale-95 transition">
+                <i class="fa-solid fa-play"></i> 开始割草
+            </button>
+            <button id="btn-open-garage" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-4 px-6 rounded-2xl border border-slate-700 flex items-center justify-center gap-2 active:scale-95 transition">
+                <i class="fa-solid fa-wrench text-amber-400"></i> 车库改造
+            </button>
+        </div>
+    </div>
+
+    <!-- Upgrade / Level Up Modal -->
+    <div id="modal-upgrade" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
+        <div class="w-full max-w-xl glass-panel rounded-3xl p-6 border border-emerald-500/30 shadow-2xl flex flex-col items-center">
+            <div class="text-emerald-400 text-xs font-bold tracking-widest uppercase mb-1"><i class="fa-solid fa-bolt mr-1"></i> LEVEL UP!</div>
+            <h2 class="text-2xl font-black text-white mb-4">选择一项强化技能</h2>
+
+            <div id="upgrade-cards-container" class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full my-2">
+                <!-- Dynamically generated 3 cards -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Garage Permanent Upgrades Modal -->
+    <div id="modal-garage" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="w-full max-w-lg glass-panel rounded-3xl p-6 border border-slate-700 shadow-2xl flex flex-col h-[85vh]">
+            <div class="flex justify-between items-center pb-4 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-boxes-packing"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-lg text-white">割草车库改造</h2>
+                        <p class="text-xs text-slate-400">使用割草金币永久提升基础属性</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 text-sm font-bold text-yellow-400">
+                    <i class="fa-solid fa-coins"></i> <span id="garage-coins">0</span>
+                </div>
+            </div>
+
+            <!-- Upgrades List -->
+            <div id="garage-upgrades-list" class="flex-1 overflow-y-auto py-4 space-y-3">
+                <!-- Dynamically generated -->
+            </div>
+
+            <button id="btn-close-garage" class="w-full py-3 bg-slate-800 hover:bg-slate-700 font-bold rounded-2xl text-slate-300 border border-slate-700 mt-2">
+                返回主页
+            </button>
+        </div>
+    </div>
+
+    <!-- Pause Modal -->
+    <div id="modal-pause" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
+        <div class="w-full max-w-sm glass-panel rounded-3xl p-6 border border-slate-700 shadow-2xl flex flex-col items-center gap-4">
+            <h2 class="text-2xl font-black text-white">游戏暂停</h2>
+            
+            <div id="pause-stats" class="w-full bg-slate-900/60 p-4 rounded-2xl text-xs space-y-2 border border-slate-800">
+                <div class="flex justify-between text-slate-400"><span>累计生存时间:</span><span id="pause-time" class="text-white font-bold">00:00</span></div>
+                <div class="flex justify-between text-slate-400"><span>当前收割草量:</span><span id="pause-kills" class="text-emerald-400 font-bold">0</span></div>
+                <div class="flex justify-between text-slate-400"><span>已解锁武器件数:</span><span id="pause-weapons" class="text-amber-400 font-bold">0</span></div>
+            </div>
+
+            <button id="btn-resume" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-lime-500 text-slate-950 font-black rounded-2xl shadow-lg active:scale-95 transition">
+                继续战斗
+            </button>
+            <button id="btn-quit" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-2xl border border-slate-700 active:scale-95 transition">
+                放弃并返回主页
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over Screen Modal -->
+    <div id="modal-gameover" class="absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="w-full max-w-md glass-panel rounded-3xl p-6 border border-slate-700 shadow-2xl flex flex-col items-center text-center">
+            <div id="gameover-icon" class="w-16 h-16 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center text-3xl mb-3 border border-red-500/40">
+                <i class="fa-solid fa-skull"></i>
+            </div>
+            <h2 id="gameover-title" class="text-3xl font-black text-white">割草中断!</h2>
+            <p id="gameover-subtitle" class="text-xs text-slate-400 mt-1">你的割草机在战术收割中损坏</p>
+
+            <div class="w-full bg-slate-900/80 p-4 rounded-2xl border border-slate-800 my-5 grid grid-cols-2 gap-3 text-left">
+                <div>
+                    <div class="text-xs text-slate-400">收割草株</div>
+                    <div id="go-kills" class="text-xl font-black text-emerald-400">0</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400">获得金币</div>
+                    <div id="go-coins" class="text-xl font-black text-yellow-400">+0</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400">生存时长</div>
+                    <div id="go-time" class="text-xl font-black text-slate-200">00:00</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400">达到的等级</div>
+                    <div id="go-level" class="text-xl font-black text-lime-400">LV.1</div>
+                </div>
+            </div>
+
+            <button id="btn-restart" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-lime-500 text-slate-950 font-black rounded-2xl shadow-xl active:scale-95 transition text-lg flex items-center justify-center gap-2">
+                <i class="fa-solid fa-rotate-right"></i> 再割一局
+            </button>
+        </div>
+    </div>
+
+    <!-- Canvas Game Viewport -->
+    <canvas id="gameCanvas" class="w-full h-full"></canvas>
+
+    <script>
+    // Web Audio API Sound Synthesizer for Zero External Asset Dependencies
+    class SoundFX {
+        constructor() {
+            this.ctx = null;
+            this.enabled = true;
+        }
+
+        init() {
+            if (!this.ctx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) this.ctx = new AudioCtx();
+            }
+            if (this.ctx && this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        }
+
+        playCut() {
+            if (!this.enabled || !this.ctx) return;
+            try {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300 + Math.random() * 150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.06);
+                gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.06);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.06);
+            } catch (e) {}
+        }
+
+        playGem() {
+            if (!this.enabled || !this.ctx) return;
+            try {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600 + Math.random() * 200, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.06, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            } catch (e) {}
+        }
+
+        playExplode() {
+            if (!this.enabled || !this.ctx) return;
+            try {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            } catch (e) {}
+        }
+
+        playLevelUp() {
+            if (!this.enabled || !this.ctx) return;
+            try {
+                const notes = [440, 554.37, 659.25, 880];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.12, this.ctx.currentTime + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.08 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.08);
+                    osc.stop(this.ctx.currentTime + idx * 0.08 + 0.2);
+                });
+            } catch (e) {}
+        }
+    }
+
+    const audio = new SoundFX();
+
+    const MOWER_TYPES = [
+        {
+            id: 'mower_classic',
+            name: '旋风者 1号',
+            desc: '平衡型割草机，速度与防护兼备。',
+            color: '#22c55e',
+            bodyColor: '#16a34a',
+            icon: 'fa-truck-monster',
+            baseSpeed: 4.2,
+            baseHp: 120,
+            weapon: 'orbit_blade'
+        },
+        {
+            id: 'mower_speed',
+            name: '疾风激光者',
+            desc: '移动极快，内置高频高能激光切割道。',
+            color: '#38bdf8',
+            bodyColor: '#0284c7',
+            icon: 'fa-bolt',
+            baseSpeed: 5.5,
+            baseHp: 90,
+            weapon: 'laser_cutter'
+        },
+        {
+            id: 'mower_heavy',
+            name: '粉碎者 霸王',
+            desc: '装甲厚重，具有强力的炸裂割草粉碎波。',
+            color: '#f97316',
+            bodyColor: '#ea580c',
+            icon: 'fa-shield-halved',
+            baseSpeed: 3.6,
+            baseHp: 180,
+            weapon: 'pulse_wave'
+        }
+    ];
+
+    // Meta Upgrade Upgrades for Garage
+    const GARAGE_UPGRADES = [
+        { id: 'hp', name: '切割机装甲', desc: '+15 初始耐久度', cost: 50, costInc: 40, level: 0, max: 10, key: 'hp' },
+        { id: 'speed', name: '履带引擎', desc: '+5% 移动速度', cost: 60, costInc: 50, level: 0, max: 8, key: 'speed' },
+        { id: 'pickup', name: '磁力抓取器', desc: '+20% 露珠拾取范围', cost: 40, costInc: 35, level: 0, max: 10, key: 'pickup' },
+        { id: 'coin_mult', name: '高效收割器', desc: '+10% 金币收益', cost: 100, costInc: 80, level: 0, max: 5, key: 'coin' }
+    ];
+
+    // All Weapons & Skills Skill Pool for Leveling Up
+    const SKILL_POOL = [
+        {
+            id: 'orbit_blade',
+            name: '环绕旋转刀刃',
+            desc: '在切割机四周形成高速运转的切割刀刃。',
+            icon: 'fa-dharmachakra',
+            color: 'from-emerald-500 to-teal-600',
+            type: 'weapon'
+        },
+        {
+            id: 'flying_scythe',
+            name: '飞旋收割镰',
+            desc: '向四周自动发射回旋飞行收割镰刀。',
+            icon: 'fa-scissors',
+            color: 'from-lime-500 to-emerald-600',
+            type: 'weapon'
+        },
+        {
+            id: 'laser_cutter',
+            name: '激光切削器',
+            desc: '向最近敌人发射高能割草光束。',
+            icon: 'fa-bolt-lightning',
+            color: 'from-sky-400 to-blue-600',
+            type: 'weapon'
+        },
+        {
+            id: 'pulse_wave',
+            name: '割草冲击波',
+            desc: '定期释放向外扩散的炸裂震荡环。',
+            icon: 'fa-circle-radiation',
+            color: 'from-orange-500 to-amber-600',
+            type: 'weapon'
+        },
+        {
+            id: 'drone_cutter',
+            name: '割草无人机',
+            desc: '召唤一台自动巡航并切碎周围杂草的辅助机。',
+            icon: 'fa-plane-up',
+            color: 'from-indigo-500 to-purple-600',
+            type: 'weapon'
+        },
+        {
+            id: 'stat_speed',
+            name: '动力加速引擎',
+            desc: '提升 10% 割草机移动速度。',
+            icon: 'fa-gauge-high',
+            color: 'from-yellow-400 to-amber-500',
+            type: 'passive'
+        },
+        {
+            id: 'stat_area',
+            name: '宽幅割皮罩',
+            desc: '提升 15% 所有武器影响与切割范围。',
+            icon: 'fa-expand',
+            color: 'from-pink-500 to-rose-600',
+            type: 'passive'
+        },
+        {
+            id: 'stat_cd',
+            name: '高效冷却液',
+            desc: '减少 10% 所有武器技能冷却时间。',
+            icon: 'fa-snowflake',
+            color: 'from-cyan-400 to-blue-500',
+            type: 'passive'
+        },
+        {
+            id: 'stat_heal',
+            name: '紧急维修补给',
+            desc: '立即恢复 30% 耐久度，并微幅提升生命上限。',
+            icon: 'fa-kit-medical',
+            color: 'from-emerald-400 to-green-600',
+            type: 'instant'
+        }
+    ];
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let gameSave = {
+        coins: 0,
+        upgrades: { hp: 0, speed: 0, pickup: 0, coin: 0 }
+    };
+
+    // Load save data if present
+    try {
+        const saved = localStorage.getItem('grass_cutter_save_v1');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            gameSave.coins = parsed.coins || 0;
+            if (parsed.upgrades) Object.assign(gameSave.upgrades, parsed.upgrades);
+        }
+    } catch(e) {}
+
+    function saveGame() {
+        try {
+            localStorage.setItem('grass_cutter_save_v1', JSON.stringify(gameSave));
+        } catch(e) {}
+    }
+
+    // Engine variables
+    let gameRunning = false;
+    let gamePaused = false;
+    let lastTime = 0;
+    let gameTime = 0; // seconds
+    let killsCount = 0;
+    let runCoins = 0;
+    let selectedMowerId = 'mower_classic';
+
+    // Camera
+    let camera = { x: 0, y: 0 };
+
+    // Game Entities
+    let player = null;
+    let grassTiles = []; // Decorative cutting grass matrix
+    let enemies = [];
+    let gems = [];
+    let particles = [];
+    let projectiles = [];
+    let floatingTexts = [];
+
+    // Inputs
+    const keys = {};
+    let touchJoystick = {
+        active: false,
+        startX: 0,
+        startY: 0,
+        currX: 0,
+        currY: 0,
+        dirX: 0,
+        dirY: 0
+    };
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Grass World Grid Initialization
+    const WORLD_SIZE = 3000; // 3000x3000px map
+    const GRASS_CELL_SIZE = 40;
+
+    function initGrassWorld() {
+        grassTiles = [];
+        const cols = Math.floor(WORLD_SIZE / GRASS_CELL_SIZE);
+        const rows = Math.floor(WORLD_SIZE / GRASS_CELL_SIZE);
+        
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                // Determine grass density / tallness
+                const isTall = Math.random() < 0.85;
+                grassTiles.push({
+                    x: c * GRASS_CELL_SIZE + GRASS_CELL_SIZE / 2,
+                    y: r * GRASS_CELL_SIZE + GRASS_CELL_SIZE / 2,
+                    state: isTall ? 1 : 0, // 1 = Tall cuttable grass, 0 = Cut short
+                    colorOffset: (Math.sin(c * 0.3) + Math.cos(r * 0.3)) * 10
+                });
+            }
+        }
+    }
+
+    class Player {
+        constructor(mowerConfig) {
+            this.x = WORLD_SIZE / 2;
+            this.y = WORLD_SIZE / 2;
+            this.radius = 22;
+            this.config = mowerConfig;
+            
+            // Base Stats calculation with Garage Bonuses
+            const hpBonus = gameSave.upgrades.hp * 15;
+            const speedBonus = 1 + (gameSave.upgrades.speed * 0.05);
+            const pickupBonus = 1 + (gameSave.upgrades.pickup * 0.2);
+
+            this.maxHp = mowerConfig.baseHp + hpBonus;
+            this.hp = this.maxHp;
+            this.speed = mowerConfig.baseSpeed * speedBonus;
+            this.pickupRadius = 90 * pickupBonus;
+            
+            this.angle = 0;
+            this.level = 1;
+            this.exp = 0;
+            this.nextLevelExp = 10;
+
+            // Player Stat Modifiers from Level-up Passives
+            this.statAreaMult = 1.0;
+            this.statCdMult = 1.0;
+            this.statSpeedMult = 1.0;
+
+            // Active Weapons equipped
+            this.weapons = {};
+            this.addWeapon(mowerConfig.weapon);
+
+            // Wheel Animation
+            this.wheelAngle = 0;
+            this.invincibleTimer = 0;
+        }
+
+        addWeapon(weaponId) {
+            if (!this.weapons[weaponId]) {
+                this.weapons[weaponId] = { level: 1, timer: 0 };
+            } else {
+                this.weapons[weaponId].level++;
+            }
+        }
+
+        update(dt) {
+            if (this.invincibleTimer > 0) this.invincibleTimer -= dt;
+
+            // Player Movement Calculation
+            let dx = 0;
+            let dy = 0;
+
+            // Keyboard Controls
+            if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
+            if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+
+            // Touch Joystick Input Override
+            if (touchJoystick.active) {
+                dx = touchJoystick.dirX;
+                dy = touchJoystick.dirY;
+            }
+
+            // Normalize vector
+            const mag = Math.hypot(dx, dy);
+            if (mag > 0.01) {
+                const moveDx = (dx / (mag > 1 ? mag : 1)) * this.speed * this.statSpeedMult;
+                const moveDy = (dy / (mag > 1 ? mag : 1)) * this.speed * this.statSpeedMult;
+
+                this.x = Math.max(50, Math.min(WORLD_SIZE - 50, this.x + moveDx));
+                this.y = Math.max(50, Math.min(WORLD_SIZE - 50, this.y + moveDy));
+
+                this.angle = Math.atan2(dy, dx);
+                this.wheelAngle += 0.2;
+
+                // Create dirt/cut grass particle trail when moving
+                if (Math.random() < 0.3) {
+                    particles.push(new Particle(
+                        this.x - Math.cos(this.angle) * 15,
+                        this.y - Math.sin(this.angle) * 15,
+                        (Math.random() - 0.5) * 1.5,
+                        (Math.random() - 0.5) * 1.5,
+                        '#4ade80',
+                        Math.random() * 4 + 2,
+                        0.3
+                    ));
+                }
+            }
+
+            // Cut grass directly underneath player body
+            this.cutGrassInRadius(this.x, this.y, this.radius + 15);
+
+            // Update & Attack Weapons
+            this.updateWeapons(dt);
+
+            // Collect EXP gems
+            this.collectGems();
+        }
+
+        cutGrassInRadius(cx, cy, rad) {
+            const col = Math.floor(cx / GRASS_CELL_SIZE);
+            const row = Math.floor(cy / GRASS_CELL_SIZE);
+            const checkDist = Math.ceil(rad / GRASS_CELL_SIZE) + 1;
+
+            const cols = Math.floor(WORLD_SIZE / GRASS_CELL_SIZE);
+            const rows = Math.floor(WORLD_SIZE / GRASS_CELL_SIZE);
+
+            let cutAny = false;
+
+            for (let r = Math.max(0, row - checkDist); r <= Math.min(rows - 1, row + checkDist); r++) {
+                for (let c = Math.max(0, col - checkDist); c <= Math.min(cols - 1, col + checkDist); c++) {
+                    const tile = grassTiles[r * cols + c];
+                    if (tile && tile.state === 1) {
+                        const dist = Math.hypot(tile.x - cx, tile.y - cy);
+                        if (dist <= rad) {
+                            tile.state = 0; // Cut grass
+                            cutAny = true;
+                            killsCount++;
+
+                            // Spawn flying cut grass blade particles
+                            for (let i = 0; i < 2; i++) {
+                                particles.push(new Particle(
+                                    tile.x + (Math.random() - 0.5) * 10,
+                                    tile.y + (Math.random() - 0.5) * 10,
+                                    (Math.random() - 0.5) * 3,
+                                    (Math.random() - 0.5) * 3 - 1,
+                                    '#86efac',
+                                    Math.random() * 3 + 2,
+                                    0.4
+                                ));
+                            }
+
+                            // Chance to drop exp gem from raw grass
+                            if (Math.random() < 0.08) {
+                                gems.push(new Gem(tile.x, tile.y, 'green', 1));
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (cutAny) audio.playCut();
+        }
+
+        updateWeapons(dt) {
+            // 1. Orbit Rotating Blade
+            if (this.weapons['orbit_blade']) {
+                const lvl = this.weapons['orbit_blade'].level;
+                const count = 1 + lvl;
+                const orbitSpeed = 2.5;
+                const orbitRadius = (60 + lvl * 8) * this.statAreaMult;
+
+                for (let i = 0; i < count; i++) {
+                    const bAngle = (gameTime * orbitSpeed) + (i * (Math.PI * 2 / count));
+                    const bx = this.x + Math.cos(bAngle) * orbitRadius;
+                    const by = this.y + Math.sin(bAngle) * orbitRadius;
+
+                    this.cutGrassInRadius(bx, by, 25);
+
+                    // Hit enemies
+                    enemies.forEach(e => {
+                        if (Math.hypot(e.x - bx, e.y - by) < e.radius + 20) {
+                            e.takeDamage(15 + lvl * 8, bx, by);
+                        }
+                    });
+
+                    // Draw blade particle effect
+                    if (Math.random() < 0.2) {
+                        particles.push(new Particle(bx, by, 0, 0, '#34d399', 3, 0.2));
+                    }
+                }
+            }
+
+            // 2. Flying Scythe Boomerang
+            if (this.weapons['flying_scythe']) {
+                const w = this.weapons['flying_scythe'];
+                w.timer += dt;
+                const cooldown = Math.max(0.4, (1.8 - w.level * 0.2) * this.statCdMult);
+                if (w.timer >= cooldown) {
+                    w.timer = 0;
+                    const count = Math.min(5, w.level);
+                    for (let i = 0; i < count; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        projectiles.push(new ScytheProjectile(this.x, this.y, angle, w.level, this.statAreaMult));
+                    }
+                }
+            }
+
+            // 3. Laser Beam Cutter
+            if (this.weapons['laser_cutter']) {
+                const w = this.weapons['laser_cutter'];
+                w.timer += dt;
+                const cooldown = Math.max(0.3, (1.2 - w.level * 0.15) * this.statCdMult);
+                if (w.timer >= cooldown) {
+                    const target = getClosestEnemy(this.x, this.y, 350);
+                    if (target) {
+                        w.timer = 0;
+                        projectiles.push(new LaserBeam(this.x, this.y, target, w.level));
+                    }
+                }
+            }
+
+            // 4. Pulse Shockwave
+            if (this.weapons['pulse_wave']) {
+                const w = this.weapons['pulse_wave'];
+                w.timer += dt;
+                const cooldown = Math.max(1.0, (3.0 - w.level * 0.3) * this.statCdMult);
+                if (w.timer >= cooldown) {
+                    w.timer = 0;
+                    const pulseRadius = (120 + w.level * 25) * this.statAreaMult;
+                    projectiles.push(new PulseWave(this.x, this.y, pulseRadius, w.level));
+                    audio.playExplode();
+                }
+            }
+
+            // 5. Drone Cutter
+            if (this.weapons['drone_cutter']) {
+                const lvl = this.weapons['drone_cutter'].level;
+                const droneAngle = gameTime * 1.5;
+                const dx = this.x + Math.cos(droneAngle) * 90;
+                const dy = this.y + Math.sin(droneAngle) * 90;
+
+                this.cutGrassInRadius(dx, dy, 30);
+                enemies.forEach(e => {
+                    if (Math.hypot(e.x - dx, e.y - dy) < e.radius + 25) {
+                        e.takeDamage(10 + lvl * 5, dx, dy);
+                    }
+                });
+            }
+        }
+
+        collectGems() {
+            const coinMult = 1 + (gameSave.upgrades.coin * 0.1);
+
+            for (let i = gems.length - 1; i >= 0; i--) {
+                const g = gems[i];
+                const dist = Math.hypot(g.x - this.x, g.y - this.y);
+
+                if (dist < this.pickupRadius) {
+                    // Magnetic pull towards player
+                    const angle = Math.atan2(this.y - g.y, this.x - g.x);
+                    const speed = 8 + (1 - dist / this.pickupRadius) * 10;
+                    g.x += Math.cos(angle) * speed;
+                    g.y += Math.sin(angle) * speed;
+
+                    if (dist < this.radius + 10) {
+                        // Collected
+                        if (g.type === 'coin') {
+                            const val = Math.round(g.value * coinMult);
+                            runCoins += val;
+                            audio.playGem();
+                            floatingTexts.push(new FloatingText(g.x, g.y, `+${val}💰`, '#facc15'));
+                        } else {
+                            this.gainExp(g.value);
+                            audio.playGem();
+                        }
+                        gems.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+        gainExp(amount) {
+            this.exp += amount;
+            if (this.exp >= this.nextLevelExp) {
+                this.exp -= this.nextLevelExp;
+                this.level++;
+                this.nextLevelExp = Math.round(this.nextLevelExp * 1.35 + 10);
+                audio.playLevelUp();
+                triggerLevelUpModal();
+            }
+            updateHUD();
+        }
+
+        takeDamage(dmg) {
+            if (this.invincibleTimer > 0) return;
+            this.hp -= dmg;
+            this.invincibleTimer = 0.4; // 0.4 sec immunity
+
+            floatingTexts.push(new FloatingText(this.x, this.y, `-${Math.round(dmg)}`, '#ef4444'));
+
+            if (this.hp <= 0) {
+                this.hp = 0;
+                gameOver();
+            }
+            updateHUD();
+        }
+
+        draw(ctx) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+
+            // Blink if invincible
+            if (this.invincibleTimer > 0 && Math.floor(Date.now() / 50) % 2 === 0) {
+                ctx.globalAlpha = 0.5;
+            }
+
+            // Draw Orbiting Drone if unlocked
+            if (this.weapons['drone_cutter']) {
+                const droneAngle = gameTime * 1.5;
+                const dx = Math.cos(droneAngle) * 90;
+                const dy = Math.sin(droneAngle) * 90;
+
+                ctx.save();
+                ctx.translate(dx, dy);
+                ctx.fillStyle = '#818cf8';
+                ctx.beginPath();
+                ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#c7d2fe';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Spinning mini blades
+                ctx.strokeStyle = '#6366f1';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, 20, gameTime * 10, gameTime * 10 + Math.PI);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Draw Orbit Blades
+            if (this.weapons['orbit_blade']) {
+                const lvl = this.weapons['orbit_blade'].level;
+                const count = 1 + lvl;
+                const orbitSpeed = 2.5;
+                const orbitRadius = (60 + lvl * 8) * this.statAreaMult;
+
+                for (let i = 0; i < count; i++) {
+                    const bAngle = (gameTime * orbitSpeed) + (i * (Math.PI * 2 / count));
+                    const bx = Math.cos(bAngle) * orbitRadius;
+                    const by = Math.sin(bAngle) * orbitRadius;
+
+                    ctx.save();
+                    ctx.translate(bx, by);
+                    ctx.rotate(gameTime * 12);
+                    ctx.fillStyle = '#34d399';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#a7f3d0';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                    // Saw teeth
+                    ctx.fillStyle = '#059669';
+                    for (let t = 0; t < 4; t++) {
+                        ctx.rotate(Math.PI / 2);
+                        ctx.fillRect(8, -2, 6, 4);
+                    }
+                    ctx.restore();
+                }
+            }
+
+            // Rotate Mower body
+            ctx.rotate(this.angle);
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(0, 5, 24, 18, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Vehicle Body
+            ctx.fillStyle = this.config.bodyColor;
+            ctx.beginPath();
+            ctx.roundRect(-22, -16, 44, 32, 8);
+            ctx.fill();
+
+            // Machine Top Deck Accent
+            ctx.fillStyle = this.config.color;
+            ctx.beginPath();
+            ctx.roundRect(-14, -10, 28, 20, 6);
+            ctx.fill();
+
+            // Wheels
+            ctx.fillStyle = '#1e293b';
+            // Front & Back Wheels
+            ctx.fillRect(-18, -20, 10, 6);
+            ctx.fillRect(8, -20, 10, 6);
+            ctx.fillRect(-18, 14, 10, 6);
+            ctx.fillRect(8, 14, 10, 6);
+
+            // Front Mower Cutter Deck
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(16, -14, 12, 28);
+            // Spinning cutter teeth inside deck
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(22, -10);
+            ctx.lineTo(22, 10);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+    }
+
+    class ScytheProjectile {
+        constructor(x, y, angle, level, areaMult) {
+            this.x = x;
+            this.y = y;
+            this.angle = angle;
+            this.speed = 7;
+            this.radius = 16 * areaMult;
+            this.damage = 25 + level * 10;
+            this.distTraveled = 0;
+            this.maxDist = 280;
+            this.returning = false;
+            this.rotation = 0;
+            this.hitEnemies = new Set();
+        }
+
+        update(dt) {
+            this.rotation += 0.3;
+
+            if (!this.returning) {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+                this.distTraveled += this.speed;
+                if (this.distTraveled >= this.maxDist) {
+                    this.returning = true;
+                }
+            } else {
+                // Fly back to player
+                const returnAngle = Math.atan2(player.y - this.y, player.x - this.x);
+                this.x += Math.cos(returnAngle) * (this.speed + 2);
+                this.y += Math.sin(returnAngle) * (this.speed + 2);
+
+                if (Math.hypot(player.x - this.x, player.y - this.y) < 25) {
+                    return false; // Remove
+                }
+            }
+
+            // Cut grass along path
+            player.cutGrassInRadius(this.x, this.y, this.radius);
+
+            // Hit Mobs
+            enemies.forEach(e => {
+                if (!this.hitEnemies.has(e.id) && Math.hypot(e.x - this.x, e.y - this.y) < e.radius + this.radius) {
+                    e.takeDamage(this.damage, this.x, this.y);
+                    this.hitEnemies.add(e.id);
+                }
+            });
+
+            return true;
+        }
+
+        draw(ctx) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.rotation);
+
+            ctx.strokeStyle = '#a3e635';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius, 0, Math.PI * 1.2);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+    }
+
+    class LaserBeam {
+        constructor(x, y, target, level) {
+            this.x = x;
+            this.y = y;
+            this.tx = target.x;
+            this.ty = target.y;
+            this.life = 0.2; // 0.2 seconds duration
+            this.maxLife = 0.2;
+            this.damage = 30 + level * 15;
+
+            target.takeDamage(this.damage, target.x, target.y);
+            player.cutGrassInRadius(target.x, target.y, 35);
+        }
+
+        update(dt) {
+            this.life -= dt;
+            return this.life > 0;
+        }
+
+        draw(ctx) {
+            ctx.save();
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = (this.life / this.maxLife) * 8 + 2;
+            ctx.shadowColor = '#0284c7';
+            ctx.shadowBlur = 10;
+
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            ctx.lineTo(this.tx, this.ty);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+    }
+
+    class PulseWave {
+        constructor(x, y, maxRadius, level) {
+            this.x = x;
+            this.y = y;
+            this.radius = 10;
+            this.maxRadius = maxRadius;
+            this.damage = 40 + level * 20;
+            this.hitEnemies = new Set();
+        }
+
+        update(dt) {
+            this.radius += 180 * dt;
+            player.cutGrassInRadius(this.x, this.y, this.radius);
+
+            enemies.forEach(e => {
+                if (!this.hitEnemies.has(e.id) && Math.hypot(e.x - this.x, e.y - this.y) < e.radius + this.radius) {
+                    e.takeDamage(this.damage, this.x, this.y);
+                    this.hitEnemies.add(e.id);
+                }
+            });
+
+            return this.radius < this.maxRadius;
+        }
+
+        draw(ctx) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(249, 115, 22, ' + (1 - this.radius / this.maxRadius) + ')';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
+    let mobIdCounter = 0;
+
+    class Enemy {
+        constructor(x, y, type) {
+            this.id = ++mobIdCounter;
+            this.x = x;
+            this.y = y;
+            this.type = type; // 'weed_normal', 'weed_fast', 'weed_boss'
+
+            if (type === 'weed_boss') {
+                this.radius = 35;
+                this.hp = 800 + (gameTime * 15);
+                this.maxHp = this.hp;
+                this.speed = 1.6;
+                this.damage = 25;
+                this.color = '#ef4444';
+                this.expValue = 100;
+                this.isBoss = true;
+            } else if (type === 'weed_fast') {
+                this.radius = 14;
+                this.hp = 25 + (gameTime * 0.8);
+                this.maxHp = this.hp;
+                this.speed = 3.2;
+                this.damage = 8;
+                this.color = '#f59e0b';
+                this.expValue = 6;
+                this.isBoss = false;
+            } else {
+                // Normal Weed
+                this.radius = 18;
+                this.hp = 40 + (gameTime * 1.2);
+                this.maxHp = this.hp;
+                this.speed = 2.1;
+                this.damage = 12;
+                this.color = '#a3e635';
+                this.expValue = 3;
+                this.isBoss = false;
+            }
+
+            this.angle = 0;
+            this.hitFlash = 0;
+        }
+
+        update(dt) {
+            if (this.hitFlash > 0) this.hitFlash -= dt;
+
+            // Move towards player
+            const angle = Math.atan2(player.y - this.y, player.x - this.x);
+            this.angle = angle;
+
+            this.x += Math.cos(angle) * this.speed;
+            this.y += Math.sin(angle) * this.speed;
+
+            // Damage player on contact
+            const dist = Math.hypot(player.x - this.x, player.y - this.y);
+            if (dist < player.radius + this.radius) {
+                player.takeDamage(this.damage);
+            }
+        }
+
+        takeDamage(dmg, hitX, hitY) {
+            this.hp -= dmg;
+            this.hitFlash = 0.15;
+
+            // Knockback
+            const kAngle = Math.atan2(this.y - hitY, this.x - hitX);
+            this.x += Math.cos(kAngle) * 8;
+            this.y += Math.sin(kAngle) * 8;
+
+            floatingTexts.push(new FloatingText(this.x, this.y, Math.round(dmg), '#ffffff'));
+
+            // Spurt leaf particles
+            for (let i = 0; i < 3; i++) {
+                particles.push(new Particle(
+                    this.x, this.y,
+                    (Math.random() - 0.5) * 4,
+                    (Math.random() - 0.5) * 4,
+                    this.color,
+                    Math.random() * 4 + 2,
+                    0.3
+                ));
+            }
+
+            if (this.hp <= 0) {
+                this.die();
+            }
+        }
+
+        die() {
+            killsCount++;
+            
+            // Drop gems/coins
+            gems.push(new Gem(this.x, this.y, this.isBoss ? 'purple' : 'green', this.expValue));
+
+            // Chance for Gold Coins
+            if (Math.random() < 0.25 || this.isBoss) {
+                const coinsCount = this.isBoss ? 10 : 1;
+                for (let c = 0; c < coinsCount; c++) {
+                    gems.push(new Gem(
+                        this.x + (Math.random() - 0.5) * 20,
+                        this.y + (Math.random() - 0.5) * 20,
+                        'coin',
+                        5
+                    ));
+                }
+            }
+
+            if (this.isBoss) {
+                document.getElementById('boss-hp-container').classList.add('hidden');
+            }
+        }
+
+        draw(ctx) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+
+            if (this.hitFlash > 0) {
+                ctx.fillStyle = '#ffffff';
+            } else {
+                ctx.fillStyle = this.color;
+            }
+
+            // Draw Mutant Weed monster body
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Sharp leaves tentacles
+            ctx.rotate(this.angle + Math.sin(gameTime * 8) * 0.2);
+            ctx.fillStyle = '#15803d';
+            for (let i = 0; i < 4; i++) {
+                ctx.rotate(Math.PI / 2);
+                ctx.beginPath();
+                ctx.moveTo(this.radius, -4);
+                ctx.lineTo(this.radius + 12, 0);
+                ctx.lineTo(this.radius, 4);
+                ctx.fill();
+            }
+
+            // Red Mutant Eyes
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(6, -5, 3, 0, Math.PI * 2);
+            ctx.arc(6, 5, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+    }
+
+    class Gem {
+        constructor(x, y, type, value) {
+            this.x = x;
+            this.y = y;
+            this.type = type; // 'green', 'purple', 'coin'
+            this.value = value;
+            this.radius = type === 'coin' ? 7 : (type === 'purple' ? 10 : 6);
+        }
+
+        draw(ctx) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+
+            if (this.type === 'coin') {
+                ctx.fillStyle = '#facc15';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ca8a04';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = this.type === 'purple' ? '#c084fc' : '#4ade80';
+                ctx.beginPath();
+                ctx.moveTo(0, -this.radius);
+                ctx.lineTo(this.radius, 0);
+                ctx.lineTo(0, this.radius);
+                ctx.lineTo(-this.radius, 0);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+    }
+
+    class Particle {
+        constructor(x, y, vx, vy, color, size, life) {
+            this.x = x;
+            this.y = y;
+            this.vx = vx;
+            this.vy = vy;
+            this.color = color;
+            this.size = size;
+            this.maxLife = life;
+            this.life = life;
+        }
+
+        update(dt) {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.life -= dt;
+            return this.life > 0;
+        }
+
+        draw(ctx) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.size, this.size);
+            ctx.restore();
+        }
+    }
+
+    class FloatingText {
+        constructor(x, y, text, color) {
+            this.x = x + (Math.random() - 0.5) * 10;
+            this.y = y;
+            this.text = text;
+            this.color = color;
+            this.life = 0.8;
+            this.maxLife = 0.8;
+        }
+
+        update(dt) {
+            this.y -= 25 * dt;
+            this.life -= dt;
+            return this.life > 0;
+        }
+
+        draw(ctx) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
+            ctx.fillStyle = this.color;
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText(this.text, this.x, this.y);
+            ctx.restore();
+        }
+    }
+
+    // Helper: Find closest enemy to coordinate
+    function getClosestEnemy(x, y, maxRange) {
+        let closest = null;
+        let minDist = maxRange;
+
+        enemies.forEach(e => {
+            const d = Math.hypot(e.x - x, e.y - y);
+            if (d < minDist) {
+                minDist = d;
+                closest = e;
+            }
+        });
+
+        return closest;
+    }
+
+    let spawnTimer = 0;
+    let bossSpawnedAt = [];
+
+    function updateSpawner(dt) {
+        spawnTimer += dt;
+        
+        // Dynamic spawn rate scaling with game time
+        const spawnInterval = Math.max(0.3, 1.8 - (gameTime / 120));
+
+        if (spawnTimer >= spawnInterval) {
+            spawnTimer = 0;
+            
+            // Spawn mob outside viewport
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.max(canvas.width, canvas.height) / 2 + 100;
+            const ex = player.x + Math.cos(angle) * dist;
+            const ey = player.y + Math.sin(angle) * dist;
+
+            const isFast = Math.random() < 0.35;
+            enemies.push(new Enemy(ex, ey, isFast ? 'weed_fast' : 'weed_normal'));
+        }
+
+        // Boss Spawning (Every 90 Seconds)
+        const bossMark = Math.floor(gameTime / 90);
+        if (bossMark > 0 && !bossSpawnedAt.includes(bossMark)) {
+            bossSpawnedAt.push(bossMark);
+            const angle = Math.random() * Math.PI * 2;
+            const ex = player.x + Math.cos(angle) * 400;
+            const ey = player.y + Math.sin(angle) * 400;
+
+            const boss = new Enemy(ex, ey, 'weed_boss');
+            enemies.push(boss);
+
+            document.getElementById('boss-hp-container').classList.remove('hidden');
+        }
+
+        // Update Boss HP bar if active boss exists
+        const boss = enemies.find(e => e.isBoss);
+        if (boss) {
+            const bossHpBar = document.getElementById('boss-hp-bar');
+            if (bossHpBar) {
+                bossHpBar.style.width = `${Math.max(0, (boss.hp / boss.maxHp) * 100)}%`;
+            }
+        }
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        // Camera smooth follow player
+        camera.x = player.x - canvas.width / 2;
+        camera.y = player.y - canvas.height / 2;
+        ctx.translate(-camera.x, -camera.y);
+
+        // 1. Draw Field Background Grid
+        ctx.fillStyle = '#0f291e'; // Mowed dark green lawn background
+        ctx.fillRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+
+        // Grid lines
+        ctx.strokeStyle = '#143828';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < WORLD_SIZE; x += 100) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, WORLD_SIZE);
+            ctx.stroke();
+        }
+        for (let y = 0; y < WORLD_SIZE; y += 100) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(WORLD_SIZE, y);
+            ctx.stroke();
+        }
+
+        // 2. Draw Grass Blades Grid
+        const cols = Math.floor(WORLD_SIZE / GRASS_CELL_SIZE);
+        const startC = Math.max(0, Math.floor(camera.x / GRASS_CELL_SIZE));
+        const endC = Math.min(cols - 1, Math.ceil((camera.x + canvas.width) / GRASS_CELL_SIZE));
+        const startR = Math.max(0, Math.floor(camera.y / GRASS_CELL_SIZE));
+        const endR = Math.min(cols - 1, Math.ceil((camera.y + canvas.height) / GRASS_CELL_SIZE));
+
+        for (let r = startR; r <= endR; r++) {
+            for (let c = startC; c <= endC; c++) {
+                const tile = grassTiles[r * cols + c];
+                if (tile && tile.state === 1) {
+                    ctx.fillStyle = '#16a34a';
+                    // Draw tall grass tuft
+                    ctx.fillRect(tile.x - 18, tile.y - 18, 36, 36);
+                    ctx.fillStyle = '#22c55e';
+                    ctx.fillRect(tile.x - 12, tile.y - 12, 24, 24);
+                }
+            }
+        }
+
+        // 3. Draw Gems
+        gems.forEach(g => g.draw(ctx));
+
+        // 4. Draw Enemies
+        enemies.forEach(e => e.draw(ctx));
+
+        // 5. Draw Player
+        player.draw(ctx);
+
+        // 6. Draw Projectiles
+        projectiles.forEach(p => p.draw(ctx));
+
+        // 7. Draw Particles
+        particles.forEach(pt => pt.draw(ctx));
+
+        // 8. Draw Floating Damage Numbers
+        floatingTexts.forEach(ft => ft.draw(ctx));
+
+        ctx.restore();
+    }
+
+    function gameLoop(time) {
+        if (!gameRunning) return;
+
+        const dt = Math.min(0.1, (time - lastTime) / 1000);
+        lastTime = time;
+
+        if (!gamePaused) {
+            gameTime += dt;
+
+            player.update(dt);
+            updateSpawner(dt);
+
+            // Update enemies
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                e.update(dt);
+                if (e.hp <= 0) {
+                    enemies.splice(i, 1);
+                }
+            }
+
+            // Update projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                if (!projectiles[i].update(dt)) {
+                    projectiles.splice(i, 1);
+                }
+            }
+
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                if (!particles[i].update(dt)) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            // Update floating texts
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                if (!floatingTexts[i].update(dt)) {
+                    floatingTexts.splice(i, 1);
+                }
+            }
+
+            updateHUD();
+        }
+
+        render();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function updateHUD() {
+        document.getElementById('hud-level').innerText = `LV.${player.level}`;
+        document.getElementById('hud-exp-bar').style.width = `${(player.exp / player.nextLevelExp) * 100}%`;
+        document.getElementById('hud-exp-text').innerText = `${player.exp} / ${player.nextLevelExp}`;
+
+        const mins = Math.floor(gameTime / 60).toString().padStart(2, '0');
+        const secs = Math.floor(gameTime % 60).toString().padStart(2, '0');
+        document.getElementById('hud-time').innerText = `${mins}:${secs}`;
+        document.getElementById('hud-kills').innerText = `已割草: ${killsCount}`;
+        document.getElementById('hud-coins').innerText = `${runCoins}`;
+
+        document.getElementById('hud-hp-text').innerText = `${Math.ceil(player.hp)} / ${player.maxHp}`;
+        document.getElementById('hud-hp-bar').style.width = `${Math.max(0, (player.hp / player.maxHp) * 100)}%`;
+    }
+
+    function triggerLevelUpModal() {
+        gamePaused = true;
+
+        // Shuffle & pick 3 skills from SKILL_POOL
+        const shuffled = [...SKILL_POOL].sort(() => Math.random() - 0.5);
+        const options = shuffled.slice(0, 3);
+
+        const container = document.getElementById('upgrade-cards-container');
+        container.innerHTML = '';
+
+        options.forEach(skill => {
+            const currentLvl = player.weapons[skill.id] ? player.weapons[skill.id].level : 0;
+            const isNew = currentLvl === 0 && skill.type === 'weapon';
+
+            const card = document.createElement('div');
+            card.className = `glass-panel rounded-2xl p-4 border border-slate-700 flex flex-col justify-between items-center text-center card-hover cursor-pointer bg-slate-900/90`;
+            card.innerHTML = `
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br ${skill.color} flex items-center justify-center text-2xl text-white shadow-lg mb-3">
+                    <i class="fa-solid ${skill.icon}"></i>
+                </div>
+                <div class="text-xs font-bold text-emerald-400 mb-1">${isNew ? '【新武器技能】' : (currentLvl > 0 ? `等级 ${currentLvl} ➔ ${currentLvl + 1}` : '【属性强化】')}</div>
+                <h3 class="font-bold text-white text-base mb-1">${skill.name}</h3>
+                <p class="text-xs text-slate-300 mb-4 flex-1">${skill.desc}</p>
+                <button class="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition">
+                    选择强化
+                </button>
+            `;
+
+            card.onclick = () => {
+                applySkill(skill);
+                document.getElementById('modal-upgrade').classList.add('hidden');
+                gamePaused = false;
+            };
+
+            container.appendChild(card);
+        });
+
+        document.getElementById('modal-upgrade').classList.remove('hidden');
+    }
+
+    function applySkill(skill) {
+        if (skill.type === 'weapon') {
+            player.addWeapon(skill.id);
+        } else if (skill.id === 'stat_speed') {
+            player.statSpeedMult += 0.10;
+        } else if (skill.id === 'stat_area') {
+            player.statAreaMult += 0.15;
+        } else if (skill.id === 'stat_cd') {
+            player.statCdMult *= 0.90;
+        } else if (skill.id === 'stat_heal') {
+            player.maxHp += 20;
+            player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.3);
+        }
+    }
+
+    function startGame() {
+        audio.init();
+
+        const mowerConfig = MOWER_TYPES.find(m => m.id === selectedMowerId);
+        
+        // Reset states
+        gameTime = 0;
+        killsCount = 0;
+        runCoins = 0;
+        enemies = [];
+        gems = [];
+        particles = [];
+        projectiles = [];
+        floatingTexts = [];
+        bossSpawnedAt = [];
+
+        initGrassWorld();
+        player = new Player(mowerConfig);
+
+        document.getElementById('screen-menu').classList.add('hidden');
+        document.getElementById('game-hud').classList.remove('hidden');
+        document.getElementById('joystick-zone').classList.remove('hidden');
+
+        gameRunning = true;
+        gamePaused = false;
+        lastTime = performance.now();
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    function gameOver() {
+        gamePaused = true;
+        gameSave.coins += runCoins;
+        saveGame();
+
+        const mins = Math.floor(gameTime / 60).toString().padStart(2, '0');
+        const secs = Math.floor(gameTime % 60).toString().padStart(2, '0');
+
+        document.getElementById('go-kills').innerText = killsCount;
+        document.getElementById('go-coins').innerText = `+${runCoins}`;
+        document.getElementById('go-time').innerText = `${mins}:${secs}`;
+        document.getElementById('go-level').innerText = `LV.${player.level}`;
+
+        document.getElementById('modal-gameover').classList.remove('hidden');
+    }
+
+    function renderGarage() {
+        document.getElementById('garage-coins').innerText = gameSave.coins;
+        const list = document.getElementById('garage-upgrades-list');
+        list.innerHTML = '';
+
+        GARAGE_UPGRADES.forEach(up => {
+            const currentLvl = gameSave.upgrades[up.key] || 0;
+            const isMax = currentLvl >= up.max;
+            const cost = up.cost + currentLvl * up.costInc;
+
+            const item = document.createElement('div');
+            item.className = 'glass-panel p-3.5 rounded-2xl border border-slate-700/70 flex items-center justify-between gap-3';
+            item.innerHTML = `
+                <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-sm text-white">${up.name}</span>
+                        <span class="text-xs text-emerald-400 font-bold">等级 ${currentLvl} / ${up.max}</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-0.5">${up.desc}</p>
+                </div>
+                <button ${isMax ? 'disabled' : ''} class="px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center gap-1">
+                    ${isMax ? '已满级' : `<i class="fa-solid fa-coins"></i> ${cost}`}
+                </button>
+            `;
+
+            item.querySelector('button').onclick = () => {
+                if (!isMax && gameSave.coins >= cost) {
+                    gameSave.coins -= cost;
+                    gameSave.upgrades[up.key] = currentLvl + 1;
+                    saveGame();
+                    renderGarage();
+                }
+            };
+
+            list.appendChild(item);
+        });
+    }
+
+    function renderMowerSelection() {
+        const container = document.getElementById('mower-select-container');
+        container.innerHTML = '';
+
+        MOWER_TYPES.forEach(m => {
+            const isSelected = m.id === selectedMowerId;
+            const card = document.createElement('div');
+            card.className = `glass-panel p-3 rounded-2xl border ${isSelected ? 'border-emerald-400 bg-emerald-950/40' : 'border-slate-800'} flex flex-col items-center cursor-pointer transition`;
+            card.innerHTML = `
+                <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-xl mb-2 text-emerald-400">
+                    <i class="fa-solid ${m.icon}"></i>
+                </div>
+                <div class="font-bold text-xs text-white text-center">${m.name}</div>
+            `;
+            card.onclick = () => {
+                selectedMowerId = m.id;
+                renderMowerSelection();
+            };
+            container.appendChild(card);
+        });
+    }
+
+    window.addEventListener('keydown', e => {
+        keys[e.code] = true;
+    });
+    window.addEventListener('keyup', e => {
+        keys[e.code] = false;
+    });
+
+    // Mobile Touch Joystick Handling
+    const joyZone = document.getElementById('joystick-zone');
+    const joyBase = document.getElementById('joystick-base');
+    const joyStick = document.getElementById('joystick-stick');
+
+    joyZone.addEventListener('touchstart', e => {
+        audio.init();
+        const touch = e.touches[0];
+        touchJoystick.active = true;
+        touchJoystick.startX = touch.clientX;
+        touchJoystick.startY = touch.clientY;
+        touchJoystick.currX = touch.clientX;
+        touchJoystick.currY = touch.clientY;
+
+        joyBase.style.left = `${touch.clientX}px`;
+        joyBase.style.top = `${touch.clientY}px`;
+        joyBase.classList.remove('hidden');
+    });
+
+    joyZone.addEventListener('touchmove', e => {
+        if (!touchJoystick.active) return;
+        const touch = e.touches[0];
+        touchJoystick.currX = touch.clientX;
+        touchJoystick.currY = touch.clientY;
+
+        const dx = touchJoystick.currX - touchJoystick.startX;
+        const dy = touchJoystick.currY - touchJoystick.startY;
+        const dist = Math.hypot(dx, dy);
+        const maxDist = 45;
+
+        const angle = Math.atan2(dy, dx);
+        const moveDist = Math.min(dist, maxDist);
+
+        joyStick.style.transform = `translate(calc(-50% + ${Math.cos(angle) * moveDist}px), calc(-50% + ${Math.sin(angle) * moveDist}px))`;
+
+        touchJoystick.dirX = Math.cos(angle);
+        touchJoystick.dirY = Math.sin(angle);
+    });
+
+    const resetJoystick = () => {
+        touchJoystick.active = false;
+        touchJoystick.dirX = 0;
+        touchJoystick.dirY = 0;
+        joyBase.classList.add('hidden');
+    };
+
+    joyZone.addEventListener('touchend', resetJoystick);
+    joyZone.addEventListener('touchcancel', resetJoystick);
+
+    // UI Buttons
+    document.getElementById('btn-start-game').onclick = startGame;
+
+    document.getElementById('btn-open-garage').onclick = () => {
+        renderGarage();
+        document.getElementById('modal-garage').classList.remove('hidden');
+    };
+
+    document.getElementById('btn-close-garage').onclick = () => {
+        document.getElementById('modal-garage').classList.add('hidden');
+    };
+
+    document.getElementById('btn-pause').onclick = () => {
+        gamePaused = true;
+        const mins = Math.floor(gameTime / 60).toString().padStart(2, '0');
+        const secs = Math.floor(gameTime % 60).toString().padStart(2, '0');
+        document.getElementById('pause-time').innerText = `${mins}:${secs}`;
+        document.getElementById('pause-kills').innerText = killsCount;
+        document.getElementById('pause-weapons').innerText = Object.keys(player.weapons).length;
+        document.getElementById('modal-pause').classList.remove('hidden');
+    };
+
+    document.getElementById('btn-resume').onclick = () => {
+        document.getElementById('modal-pause').classList.add('hidden');
+        gamePaused = false;
+    };
+
+    document.getElementById('btn-quit').onclick = () => {
+        gameRunning = false;
+        document.getElementById('modal-pause').classList.add('hidden');
+        document.getElementById('game-hud').classList.add('hidden');
+        document.getElementById('joystick-zone').classList.add('hidden');
+        document.getElementById('screen-menu').classList.remove('hidden');
+    };
+
+    document.getElementById('btn-restart').onclick = () => {
+        document.getElementById('modal-gameover').classList.add('hidden');
+        startGame();
+    };
+
+    // Initialize Menu UI
+    renderMowerSelection();
+    </script>
+</body>
+</html>
