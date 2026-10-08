@@ -1,1801 +1,1188 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>战车割草大作战</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Three.js 3D Engine -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0,
+      maximum-scale=1.0,user-scalable=no">
 
-    <style>
-        body {
-            font-family: 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: none;
-            overflow: hidden;
-            background-color: #090d16;
-        }
-        canvas {
-            display: block;
-            touch-action: none;
-        }
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.88);
-            backdrop-filter: blur(14px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-        }
-        .glass-card {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .glass-card:hover {
-            border-color: rgba(52, 211, 153, 0.5);
-            transform: translateY(-2px);
-        }
-        .glass-card.active-card {
-            border-color: #10b981;
-            background: rgba(16, 185, 129, 0.12);
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
-        }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(15, 23, 42, 0.6);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #10b981;
-            border-radius: 3px;
-        }
-        @keyframes pulse-glow {
-            0%, 100% { opacity: 0.8; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.03); }
-        }
-        .animate-pulse-glow {
-            animation: pulse-glow 2.5s infinite ease-in-out;
-        }
-        .neon-glow-text {
-            text-shadow: 0 0 12px rgba(16, 185, 129, 0.6), 0 0 24px rgba(20, 184, 166, 0.4);
-        }
-        .vehicle-img-preview {
-            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
-            transition: transform 0.3s ease;
-        }
-        .glass-card:hover .vehicle-img-preview {
-            transform: scale(1.08) rotate(-2deg);
-        }
-    </style>
+<title>战车割草大作战</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    user-select:none;
+}
+
+body{
+    background:#07111f;
+    color:white;
+    font-family:Arial,"Microsoft YaHei",sans-serif;
+    overflow:hidden;
+}
+
+#game{
+    display:block;
+    width:100vw;
+    height:100vh;
+    background:
+      radial-gradient(circle at center,#183d32,#07111f 75%);
+}
+
+#ui{
+    position:fixed;
+    top:12px;
+    left:12px;
+    right:12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    z-index:10;
+    pointer-events:none;
+}
+
+.panel{
+    background:rgba(0,0,0,.62);
+    border:2px solid rgba(255,255,255,.2);
+    border-radius:14px;
+    padding:10px 14px;
+    backdrop-filter:blur(6px);
+}
+
+#title{
+    font-size:20px;
+    font-weight:bold;
+}
+
+#stats{
+    font-size:14px;
+    line-height:1.7;
+}
+
+button{
+    pointer-events:auto;
+    border:0;
+    border-radius:12px;
+    padding:10px 15px;
+    font-size:15px;
+    font-weight:bold;
+    color:white;
+    background:#1677ff;
+    cursor:pointer;
+}
+
+button:hover{
+    transform:scale(1.04);
+}
+
+#bookBtn{
+    background:#7b3cff;
+}
+
+#controls{
+    position:fixed;
+    bottom:18px;
+    left:50%;
+    transform:translateX(-50%);
+    z-index:20;
+    display:grid;
+    grid-template-columns:60px 60px 60px;
+    grid-template-rows:60px 60px;
+    gap:5px;
+}
+
+.control{
+    width:60px;
+    height:60px;
+    border-radius:18px;
+    background:rgba(255,255,255,.18);
+    border:2px solid rgba(255,255,255,.3);
+    font-size:25px;
+}
+
+.up{grid-column:2}
+.left{grid-column:1}
+.down{grid-column:2}
+.right{grid-column:3}
+
+#shootBtn{
+    position:fixed;
+    right:25px;
+    bottom:45px;
+    width:90px;
+    height:90px;
+    border-radius:50%;
+    background:#ff4b22;
+    border:4px solid rgba(255,255,255,.5);
+    z-index:20;
+}
+
+#encyclopedia{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:100;
+    background:rgba(3,8,15,.96);
+    overflow:auto;
+    padding:25px;
+}
+
+#encyclopedia h1{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+#closeBook{
+    position:fixed;
+    right:20px;
+    top:20px;
+    background:#e53935;
+}
+
+.monsters{
+    max-width:1100px;
+    margin:auto;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:18px;
+}
+
+.card{
+    background:linear-gradient(145deg,#17283d,#0c1726);
+    border:2px solid rgba(255,255,255,.12);
+    border-radius:20px;
+    padding:18px;
+    box-shadow:0 10px 30px rgba(0,0,0,.3);
+}
+
+.monsterCanvas{
+    width:100%;
+    height:180px;
+    background:
+      radial-gradient(circle,#244d44,#0b1622);
+    border-radius:15px;
+    display:block;
+    margin-bottom:12px;
+}
+
+.card h2{
+    margin-bottom:7px;
+}
+
+.card p{
+    color:#cbd5e1;
+    line-height:1.6;
+    font-size:14px;
+}
+
+.tag{
+    display:inline-block;
+    margin-top:8px;
+    padding:5px 9px;
+    border-radius:8px;
+    background:#263d58;
+    font-size:12px;
+}
+
+#bossBar{
+    position:fixed;
+    top:90px;
+    left:50%;
+    transform:translateX(-50%);
+    width:min(500px,80vw);
+    display:none;
+    z-index:15;
+}
+
+#bossName{
+    text-align:center;
+    font-weight:bold;
+    margin-bottom:5px;
+}
+
+.bar{
+    height:15px;
+    background:#222;
+    border-radius:20px;
+    overflow:hidden;
+}
+
+#bossHP{
+    height:100%;
+    width:100%;
+    background:linear-gradient(90deg,#ff2d55,#ff9f00);
+}
+
+@media(max-width:600px){
+    #title{font-size:15px}
+    #stats{font-size:12px}
+    #bookBtn{padding:8px}
+}
+</style>
 </head>
-<body class="w-screen h-screen relative select-none text-white overflow-hidden">
 
-    <!-- 3D Canvas container -->
-    <div id="canvas-container" class="w-full h-full absolute inset-0 z-0"></div>
+<body>
 
-    <!-- HUD Overlay -->
-    <div id="game-hud" class="absolute inset-0 pointer-events-none z-10 hidden flex flex-col justify-between p-4">
-        <!-- Top Stats Header -->
-        <div class="w-full max-w-3xl mx-auto flex flex-col gap-2">
-            <!-- EXP Progress Bar -->
-            <div class="flex items-center gap-3">
-                <span id="hud-level" class="bg-gradient-to-r from-emerald-500 to-teal-600 font-black px-3.5 py-1 rounded-full text-xs shadow-lg border border-emerald-300">LV.1</span>
-                <div class="flex-1 h-4 bg-slate-900/80 rounded-full overflow-hidden border border-slate-700 relative shadow-inner">
-                    <div id="hud-exp-bar" class="h-full bg-gradient-to-r from-emerald-400 via-lime-400 to-amber-300 w-0 transition-all duration-200"></div>
-                    <span id="hud-exp-text" class="absolute inset-0 text-[10px] font-black flex items-center justify-center drop-shadow">0 / 100</span>
-                </div>
-            </div>
+<canvas id="game"></canvas>
 
-            <!-- Stats Bar -->
-            <div class="flex justify-between items-center text-xs font-bold text-slate-200 glass-panel px-4 py-2 rounded-2xl border border-slate-700/60 shadow-xl">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-stopwatch text-amber-400 text-sm"></i>
-                    <span id="hud-time">00:00</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-leaf text-emerald-400 text-sm"></i>
-                    <span id="hud-kills">割草量: 0</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-coins text-yellow-400 text-sm"></i>
-                    <span id="hud-coins">0</span>
-                </div>
-            </div>
-        </div>
+<div id="ui">
 
-        <!-- Boss Health Bar -->
-        <div id="boss-hp-container" class="w-full max-w-md mx-auto hidden flex-col items-center gap-1 my-2">
-            <div class="flex items-center gap-2 text-xs font-black text-red-400 tracking-wider">
-                <i class="fa-solid fa-skull"></i> <span id="boss-name">变异巨霸草王</span>
-            </div>
-            <div class="w-full h-3.5 bg-slate-950 rounded-full overflow-hidden border border-red-500 shadow-xl">
-                <div id="boss-hp-bar" class="h-full bg-gradient-to-r from-red-600 via-rose-500 to-amber-400 w-full transition-all duration-100"></div>
-            </div>
-        </div>
-
-        <!-- Bottom Controls & Vehicle HP -->
-        <div class="w-full max-w-3xl mx-auto flex justify-between items-end">
-            <!-- HP Bar -->
-            <div class="w-48 sm:w-64 glass-panel p-2.5 rounded-2xl border border-slate-700/60 flex flex-col gap-1 shadow-lg">
-                <div class="flex justify-between text-xs font-bold">
-                    <span class="text-red-400 flex items-center gap-1"><i class="fa-solid fa-heart"></i> 战车耐久度</span>
-                    <span id="hud-hp-text">100/100</span>
-                </div>
-                <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-700">
-                    <div id="hud-hp-bar" class="h-full bg-gradient-to-r from-red-500 to-emerald-400 w-full transition-all duration-150"></div>
-                </div>
-            </div>
-
-            <!-- Pause Button -->
-            <button id="btn-pause" class="pointer-events-auto bg-slate-800/90 hover:bg-slate-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-lg border border-slate-600 shadow-xl active:scale-95 transition">
-                <i class="fa-solid fa-pause"></i>
-            </button>
+    <div class="panel">
+        <div id="title">🌱 战车割草大作战</div>
+        <div id="stats">
+            ❤️ HP：<span id="hp">100</span>
+           　
+            💀 击杀：<span id="kills">0</span>
+           　
+            ⭐ 等级：<span id="level">1</span>
         </div>
     </div>
 
-    <!-- Virtual Touch Joystick Zone -->
-    <div id="joystick-zone" class="absolute inset-0 pointer-events-auto z-0 hidden">
-        <div id="joystick-base" class="absolute w-28 h-28 rounded-full bg-white/10 border-2 border-white/20 hidden -translate-x-1/2 -translate-y-1/2 pointer-events-none backdrop-blur-sm">
-            <div id="joystick-stick" class="absolute w-12 h-12 rounded-full bg-emerald-500/80 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border border-emerald-300 shadow-lg"></div>
-        </div>
+    <button id="bookBtn">📖 怪物图鉴</button>
+
+</div>
+
+<div id="bossBar">
+    <div id="bossName">👑 微观大魔王</div>
+    <div class="bar">
+        <div id="bossHP"></div>
     </div>
+</div>
 
-    <!-- Main Screen Menu -->
-    <div id="screen-menu" class="absolute inset-0 z-20 flex flex-col items-center justify-between p-4 sm:p-6 bg-gradient-to-b from-slate-950/90 via-slate-900/80 to-emerald-950/90 overflow-y-auto">
-        <!-- Title Header -->
-        <div class="flex flex-col items-center mt-2 text-center">
-            <div class="inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-4 py-1 rounded-full text-xs font-semibold mb-2 animate-pulse-glow">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> 3D 重装战车图鉴 & 割草战场
-            </div>
-            <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-lime-300 to-teal-300 drop-shadow-xl neon-glow-text">
-                战车割草大作战
-            </h1>
-            <p class="text-slate-400 text-xs sm:text-sm mt-1 max-w-md">选择出战战车，升级改装专属硬件部件，横扫变异植物！</p>
+<div id="controls">
+    <button class="control up" data-key="w">▲</button>
+    <button class="control left" data-key="a">◀</button>
+    <button class="control down" data-key="s">▼</button>
+    <button class="control right" data-key="d">▶</button>
+</div>
+
+<button id="shootBtn">⚡攻击</button>
+
+<div id="encyclopedia">
+
+    <button id="closeBook">✕ 关闭</button>
+
+    <h1>📖 怪物图鉴</h1>
+
+    <div class="monsters">
+
+        <div class="card">
+            <canvas class="monsterCanvas" data-monster="helmet"></canvas>
+            <h2>🪖 安全帽瓜瓜菌</h2>
+            <p>
+                头戴黄色安全帽、手持小铲子的绿色长条小怪物。
+                身体结实，防御力较高，是早期比较难处理的敌人。
+            </p>
+            <span class="tag">防御型</span>
+            <span class="tag">掉落：能量碎片 25%</span>
         </div>
 
-        <!-- 3D Vehicle Preview Pedestal Window -->
-        <div class="w-full max-w-xl my-3 flex flex-col items-center">
-            <div class="w-full glass-panel rounded-3xl p-3 border border-emerald-500/30 shadow-2xl relative overflow-hidden flex flex-col items-center">
-                <!-- Top Badge Overlay -->
-                <div class="w-full flex justify-between items-center mb-1 px-2">
-                    <div class="flex items-center gap-2">
-                        <span id="showcase-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                            <i class="fa-solid fa-eye mr-1"></i> 实时 3D 战车全景预览
-                        </span>
-                    </div>
-                    <span id="save-status-badge" class="text-[10px] text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-800 flex items-center gap-1">
-                        <i class="fa-solid fa-floppy-disk"></i> 已同步存档
-                    </span>
-                </div>
-
-                <!-- Showcase Vehicle Title & Details -->
-                <div id="showcase-info-box" class="w-full text-center my-1">
-                    <h3 id="showcase-title" class="text-xl font-black text-white tracking-wide">旋风极光 1号</h3>
-                    <p id="showcase-desc" class="text-xs text-slate-300 max-w-md mx-auto mt-0.5">蓝白超跑造型，双轴高速割草切盘，气动加压。</p>
-                </div>
-
-                <!-- Mini Stat Bars in Showcase -->
-                <div id="showcase-stats" class="flex justify-center gap-4 text-xs font-bold text-slate-300 my-1 bg-slate-900/60 px-4 py-1.5 rounded-xl border border-slate-800">
-                    <div class="flex items-center gap-1.5"><i class="fa-solid fa-heart text-red-400"></i> 耐久: <span id="showcase-hp" class="text-white">130</span></div>
-                    <div class="flex items-center gap-1.5"><i class="fa-solid fa-gauge-high text-cyan-400"></i> 速度: <span id="showcase-speed" class="text-white">10.5</span></div>
-                    <div class="flex items-center gap-1.5"><i class="fa-solid fa-crosshair text-amber-400"></i> 特技: <span id="showcase-weapon" class="text-amber-300">旋转刀刃</span></div>
-                </div>
-            </div>
+        <div class="card">
+            <canvas class="monsterCanvas" data-monster="purple"></canvas>
+            <h2>💼 打工紫球菌</h2>
+            <p>
+                拎着小公文包的紫色小球菌。
+                它们通常成群结队出现，喜欢从四面八方包围战车。
+            </p>
+            <span class="tag">群攻型</span>
+            <span class="tag">掉落：金币 30%</span>
         </div>
 
-        <!-- Vehicle Showcase Selection Grid with Custom SVG Visual Graphics -->
-        <div class="w-full max-w-2xl mb-3">
-            <div class="flex justify-between items-center mb-2 px-2">
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider"><i class="fa-solid fa-car"></i> 点击选择战车 (高清造型图鉴)</h2>
-                <div class="flex items-center gap-1 text-xs font-black text-yellow-400 bg-slate-900/80 px-3 py-1 rounded-full border border-amber-500/30">
-                    <i class="fa-solid fa-coins"></i> <span id="menu-coins">0</span>
-                </div>
-            </div>
-            <div id="mower-select-container" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <!-- Dynamically populated with SVG vehicle illustrations via JS -->
-            </div>
+        <div class="card">
+            <canvas class="monsterCanvas" data-monster="yellow"></canvas>
+            <h2>🟡 黄嘟嘟球菌</h2>
+            <p>
+                萌萌的黄色小球菌。
+                虽然单个实力不强，但是移动速度非常快，而且数量庞大。
+            </p>
+            <span class="tag">高速型</span>
+            <span class="tag">掉落：金币 20%</span>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="flex flex-col sm:flex-row gap-3 w-full max-w-md mb-2">
-            <button id="btn-start-game" class="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black py-3.5 px-6 rounded-2xl shadow-xl shadow-emerald-950/50 text-base flex items-center justify-center gap-2 active:scale-95 transition">
-                <i class="fa-solid fa-play"></i> 出击割草
-            </button>
-            <button id="btn-open-garage" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3.5 px-6 rounded-2xl border border-slate-700 flex items-center justify-center gap-2 active:scale-95 transition">
-                <i class="fa-solid fa-gears text-amber-400"></i> 零件改装升级
-            </button>
+        <div class="card">
+            <canvas class="monsterCanvas" data-monster="blue"></canvas>
+            <h2>🌀 旋风蓝螺旋</h2>
+            <p>
+                像蓝色弹簧和旋风一样漂浮盘旋的神秘菌。
+                身形敏捷，很难被普通攻击命中。
+            </p>
+            <span class="tag">敏捷型</span>
+            <span class="tag">掉落：蓝能量 35%</span>
         </div>
+
+        <div class="card">
+            <canvas class="monsterCanvas" data-monster="red"></canvas>
+            <h2>🔥 怒火红刺菌</h2>
+            <p>
+                橙红色的带刺小怪物。
+                受到攻击后会进入狂暴状态，速度明显提升。
+            </p>
+            <span class="tag">狂暴型</span>
+            <span class="tag">掉落：红能量 40%</span>
+        </div>
+
+        <div class="card">
+            <canvas class="monsterCanvas" data-monster="boss"></canvas>
+            <h2>👑 微观大魔王</h2>
+            <p>
+                巨型多核心母体细菌。
+                身体周围拥有炫彩能量光环，是整个战场最危险的敌人。
+            </p>
+            <span class="tag">BOSS</span>
+            <span class="tag">掉落：传奇核心 100%</span>
+        </div>
+
     </div>
+</div>
 
-    <!-- Vehicle Parts Customization / Garage Modal -->
-    <div id="modal-garage" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden">
-        <div class="w-full max-w-2xl glass-panel rounded-3xl p-5 border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
-            <!-- Header -->
-            <div class="flex justify-between items-center pb-3 border-b border-slate-800">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl border border-amber-500/30">
-                        <i class="fa-solid fa-screwdriver-wrench"></i>
-                    </div>
-                    <div>
-                        <h2 class="font-bold text-base text-white">战车专属零件改造</h2>
-                        <p class="text-xs text-slate-400">升级战车6大核心硬件部件，永久提升战斗属性</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-1.5 bg-slate-900 px-3.5 py-1.5 rounded-full border border-slate-700 text-sm font-black text-yellow-400">
-                    <i class="fa-solid fa-coins"></i> <span id="garage-coins">0</span>
-                </div>
-            </div>
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
 
-            <!-- Vehicle Stats Preview Bar -->
-            <div id="garage-stats-summary" class="grid grid-cols-3 sm:grid-cols-6 gap-2 my-3 p-3 bg-slate-900/80 rounded-2xl border border-slate-800 text-[11px]">
-                <!-- Injected via JS -->
-            </div>
+let W,H;
+function resize(){
+    W=canvas.width=innerWidth*devicePixelRatio;
+    H=canvas.height=innerHeight*devicePixelRatio;
+    canvas.style.width=innerWidth+"px";
+    canvas.style.height=innerHeight+"px";
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+resize();
+addEventListener("resize",resize);
 
-            <!-- Parts Upgrade Grid -->
-            <div id="garage-parts-list" class="flex-1 overflow-y-auto pr-1 space-y-2.5 my-1">
-                <!-- Injected via JS -->
-            </div>
+const keys={w:false,a:false,s:false,d:false};
 
-            <!-- Footer Buttons -->
-            <div class="flex gap-3 pt-3 border-t border-slate-800">
-                <button id="btn-reset-save" class="px-4 py-2 bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-800/60 font-bold text-xs rounded-xl transition">
-                    <i class="fa-solid fa-rotate"></i> 重置数据
-                </button>
-                <button id="btn-close-garage" class="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black rounded-2xl active:scale-95 transition">
-                    完成改装
-                </button>
-            </div>
-        </div>
-    </div>
+let player={
+    x:innerWidth/2,
+    y:innerHeight/2,
+    hp:100,
+    speed:4,
+    angle:0
+};
 
-    <!-- Upgrade Skill Select Modal (Level Up) -->
-    <div id="modal-upgrade" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden">
-        <div class="w-full max-w-xl glass-panel rounded-3xl p-6 border border-emerald-500/40 shadow-2xl flex flex-col items-center">
-            <div class="text-emerald-400 text-xs font-black tracking-widest uppercase mb-1 flex items-center gap-1">
-                <i class="fa-solid fa-bolt"></i> LEVEL UP!
-            </div>
-            <h2 class="text-xl font-black text-white mb-4">选择一项战斗特技升级</h2>
+let bullets=[];
+let monsters=[];
+let particles=[];
 
-            <div id="upgrade-cards-container" class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
-                <!-- Dynamically generated 3 cards -->
-            </div>
-        </div>
-    </div>
+let kills=0;
+let level=1;
+let frame=0;
 
-    <!-- Pause Modal -->
-    <div id="modal-pause" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
-        <div class="w-full max-w-sm glass-panel rounded-3xl p-6 border border-slate-700 shadow-2xl flex flex-col items-center gap-4">
-            <h2 class="text-xl font-black text-white">游戏暂停</h2>
-            <div class="w-full bg-slate-900/80 p-4 rounded-2xl text-xs space-y-2 border border-slate-800">
-                <div class="flex justify-between text-slate-400"><span>累计生存:</span><span id="pause-time" class="text-white font-bold">00:00</span></div>
-                <div class="flex justify-between text-slate-400"><span>已收割草量:</span><span id="pause-kills" class="text-emerald-400 font-bold">0</span></div>
-                <div class="flex justify-between text-slate-400"><span>技能组件:</span><span id="pause-weapons" class="text-amber-400 font-bold">0</span></div>
-            </div>
-            <button id="btn-resume" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black rounded-2xl shadow-lg active:scale-95 transition">
-                继续战斗
-            </button>
-            <button id="btn-quit" class="w-full py-2.5 bg-slate-800 text-slate-300 font-bold rounded-2xl border border-slate-700 active:scale-95 transition">
-                退出到主菜单
-            </button>
-        </div>
-    </div>
-
-    <!-- Game Over Modal -->
-    <div id="modal-gameover" class="absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden">
-        <div class="w-full max-w-md glass-panel rounded-3xl p-6 border border-slate-700 shadow-2xl flex flex-col items-center text-center">
-            <div id="gameover-icon" class="w-14 h-14 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center text-2xl mb-2 border border-red-500/40">
-                <i class="fa-solid fa-skull"></i>
-            </div>
-            <h2 id="gameover-title" class="text-2xl font-black text-white">收割作业结束!</h2>
-            <p class="text-xs text-slate-400 mt-1">战车耐久损耗耗尽，自动进行结算</p>
-
-            <div class="w-full bg-slate-900/80 p-4 rounded-2xl border border-slate-800 my-4 grid grid-cols-2 gap-3 text-left">
-                <div>
-                    <div class="text-[11px] text-slate-400">收割草量</div>
-                    <div id="go-kills" class="text-lg font-black text-emerald-400">0</div>
-                </div>
-                <div>
-                    <div class="text-[11px] text-slate-400">收割金币</div>
-                    <div id="go-coins" class="text-lg font-black text-yellow-400">+0</div>
-                </div>
-                <div>
-                    <div class="text-[11px] text-slate-400">生存时长</div>
-                    <div id="go-time" class="text-lg font-black text-slate-200">00:00</div>
-                </div>
-                <div>
-                    <div class="text-[11px] text-slate-400">达成等级</div>
-                    <div id="go-level" class="text-lg font-black text-teal-400">LV.1</div>
-                </div>
-            </div>
-
-            <button id="btn-restart" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black rounded-2xl shadow-xl active:scale-95 transition text-base flex items-center justify-center gap-2">
-                <i class="fa-solid fa-rotate-right"></i> 再割一局
-            </button>
-        </div>
-    </div>
-
-    <script>
-    class SoundFX {
-        constructor() {
-            this.ctx = null;
-        }
-        init() {
-            if (!this.ctx) {
-                const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                if (AudioCtx) this.ctx = new AudioCtx();
-            }
-            if (this.ctx && this.ctx.state === 'suspended') {
-                this.ctx.resume();
-            }
-        }
-        playCut() {
-            if (!this.ctx) return;
-            try {
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(260 + Math.random() * 120, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(70, this.ctx.currentTime + 0.05);
-                gain.gain.setValueAtTime(0.06, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.05);
-            } catch (e) {}
-        }
-        playGem() {
-            if (!this.ctx) return;
-            try {
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(500 + Math.random() * 200, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(1100, this.ctx.currentTime + 0.07);
-                gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.07);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.07);
-            } catch (e) {}
-        }
-        playExplode() {
-            if (!this.ctx) return;
-            try {
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(100, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(25, this.ctx.currentTime + 0.2);
-                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.2);
-            } catch (e) {}
-        }
-        playLevelUp() {
-            if (!this.ctx) return;
-            try {
-                const notes = [440, 554.37, 659.25, 880];
-                notes.forEach((freq, idx) => {
-                    const osc = this.ctx.createOscillator();
-                    const gain = this.ctx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.value = freq;
-                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime + idx * 0.07);
-                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.07 + 0.18);
-                    osc.connect(gain);
-                    gain.connect(this.ctx.destination);
-                    osc.start(this.ctx.currentTime + idx * 0.07);
-                    osc.stop(this.ctx.currentTime + idx * 0.07 + 0.18);
-                });
-            } catch (e) {}
-        }
+const monsterTypes=[
+    {
+        type:"helmet",
+        name:"安全帽瓜瓜菌",
+        hp:55,
+        speed:0.7,
+        size:25
+    },
+    {
+        type:"purple",
+        name:"打工紫球菌",
+        hp:20,
+        speed:1.3,
+        size:18
+    },
+    {
+        type:"yellow",
+        name:"黄嘟嘟球菌",
+        hp:12,
+        speed:2.2,
+        size:15
+    },
+    {
+        type:"blue",
+        name:"旋风蓝螺旋",
+        hp:25,
+        speed:1.8,
+        size:19
+    },
+    {
+        type:"red",
+        name:"怒火红刺菌",
+        hp:35,
+        speed:1.2,
+        size:23
     }
-    const audio = new SoundFX();
+];
 
-    // High Quality Custom SVG Graphic Illustrations for Vehicle Cards
-    const VEHICLE_SVG_ART = {
-        mower_aurora: `
-            <svg viewBox="0 0 100 60" class="w-full h-12 vehicle-img-preview" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 38 L25 22 L65 22 L85 32 L92 38 L90 46 L10 46 Z" fill="#3b82f6" stroke="#60a5fa" stroke-width="1.5"/>
-                <path d="M30 22 L45 12 L62 12 L72 22 Z" fill="#1e293b" stroke="#38bdf8" stroke-width="1"/>
-                <rect x="5" y="42" width="88" height="4" rx="2" fill="#0284c7"/>
-                <circle cx="28" cy="46" r="8" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
-                <circle cx="74" cy="46" r="8" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
-                <polygon points="82,32 95,32 92,36 80,36" fill="#38bdf8"/>
-                <line x1="12" y1="38" x2="88" y2="38" stroke="#60a5fa" stroke-width="1" stroke-dasharray="3 2"/>
-            </svg>`,
-        mower_crusher: `
-            <svg viewBox="0 0 100 60" class="w-full h-12 vehicle-img-preview" xmlns="http://www.w3.org/2000/svg">
-                <rect x="15" y="16" width="65" height="22" rx="4" fill="#ef4444" stroke="#f87171" stroke-width="1.5"/>
-                <path d="M35 16 L48 6 L70 6 L78 16 Z" fill="#1e293b" stroke="#fca5a5" stroke-width="1"/>
-                <rect x="10" y="30" width="80" height="6" fill="#334155"/>
-                <rect x="75" y="18" width="12" height="12" rx="2" fill="#facc15"/>
-                <circle cx="25" cy="44" r="11" fill="#020617" stroke="#ef4444" stroke-width="2.5"/>
-                <circle cx="25" cy="44" r="5" fill="#f87171"/>
-                <circle cx="75" cy="44" r="11" fill="#020617" stroke="#ef4444" stroke-width="2.5"/>
-                <circle cx="75" cy="44" r="5" fill="#f87171"/>
-                <rect x="42" y="2" width="20" height="4" rx="1" fill="#facc15"/>
-            </svg>`,
-        mower_speed: `
-            <svg viewBox="0 0 100 60" class="w-full h-12 vehicle-img-preview" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 40 L25 26 L75 26 L95 38 L92 44 L5 44 Z" fill="#090d16" stroke="#06b6d4" stroke-width="2"/>
-                <path d="M35 26 L55 16 L72 26 Z" fill="#0891b2" opacity="0.8"/>
-                <path d="M85 24 L98 34 L88 34 Z" fill="#06b6d4"/>
-                <line x1="8" y1="40" x2="92" y2="40" stroke="#22d3ee" stroke-width="2"/>
-                <circle cx="26" cy="44" r="7" fill="#0f172a" stroke="#22d3ee" stroke-width="2"/>
-                <circle cx="76" cy="44" r="7" fill="#0f172a" stroke="#22d3ee" stroke-width="2"/>
-                <line x1="80" y1="28" x2="95" y2="28" stroke="#06b6d4" stroke-width="2"/>
-            </svg>`,
-        mower_flamer: `
-            <svg viewBox="0 0 100 60" class="w-full h-12 vehicle-img-preview" xmlns="http://www.w3.org/2000/svg">
-                <rect x="20" y="14" width="55" height="24" rx="3" fill="#f59e0b" stroke="#fbbf24" stroke-width="1.5"/>
-                <path d="M45 14 L55 4 L72 4 L75 14 Z" fill="#0f172a" stroke="#f59e0b" stroke-width="1"/>
-                <path d="M5 28 L25 28 L28 42 L2 42 Z" fill="#dc2626"/>
-                <circle cx="12" cy="35" r="7" fill="#f97316"/>
-                <polygon points="75,22 96,28 96,38 75,34" fill="#ef4444" stroke="#facc15" stroke-width="1"/>
-                <circle cx="32" cy="44" r="9" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
-                <circle cx="70" cy="44" r="7" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
-            </svg>`,
-        mower_tesla: `
-            <svg viewBox="0 0 100 60" class="w-full h-12 vehicle-img-preview" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 38 L30 14 L75 18 L90 32 L88 44 L12 44 Z" fill="#cbd5e1" stroke="#38bdf8" stroke-width="1.5"/>
-                <path d="M35 16 L65 18 L75 30 L35 30 Z" fill="#0284c7" opacity="0.7"/>
-                <path d="M82 30 L88 30 L85 35" stroke="#38bdf8" stroke-width="2.5" fill="none"/>
-                <path d="M20 28 L35 28 L25 36 L40 36" stroke="#38bdf8" stroke-width="1.5" fill="none"/>
-                <circle cx="28" cy="44" r="8" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
-                <circle cx="72" cy="44" r="8" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
-            </svg>`,
-        mower_quantum: `
-            <svg viewBox="0 0 100 60" class="w-full h-12 vehicle-img-preview" xmlns="http://www.w3.org/2000/svg">
-                <ellipse cx="50" cy="28" rx="38" ry="14" fill="#a855f7" stroke="#c084fc" stroke-width="1.5"/>
-                <ellipse cx="50" cy="22" rx="18" ry="10" fill="#3b0764" stroke="#e9d5ff" stroke-width="1"/>
-                <circle cx="50" cy="20" r="6" fill="#c084fc"/>
-                <path d="M80 28 L94 22 L98 32 Z" fill="#c084fc"/>
-                <path d="M20 28 L6 22 L2 32 Z" fill="#c084fc"/>
-                <ellipse cx="50" cy="42" rx="30" ry="4" fill="#a855f7" opacity="0.5"/>
-                <circle cx="26" cy="42" r="6" fill="#0f172a" stroke="#c084fc" stroke-width="2"/>
-                <circle cx="74" cy="42" r="6" fill="#0f172a" stroke="#c084fc" stroke-width="2"/>
-            </svg>`
-    };
+function randomMonster(){
 
-    const MOWER_TYPES = [
-        {
-            id: 'mower_aurora',
-            name: '旋风极光 1号',
-            desc: '蓝白超跑造型，双轴高速割草切盘，气动加压。',
-            color: 0x2563eb,
-            bodyHex: '#3b82f6',
-            weaponName: '环绕切刀',
-            baseSpeed: 10.5,
-            baseHp: 130,
-            weapon: 'orbit_blade',
-            price: 0
-        },
-        {
-            id: 'mower_crusher',
-            name: '粉碎霸王车',
-            desc: '重型越野大脚车，配备车顶探照灯与加宽粉碎防撞梁。',
-            color: 0xdc2626,
-            bodyHex: '#ef4444',
-            weaponName: '震荡波环',
-            baseSpeed: 8.8,
-            baseHp: 220,
-            weapon: 'pulse_wave',
-            price: 200
-        },
-        {
-            id: 'mower_speed',
-            name: '疾风激光猎手',
-            desc: '暗夜隐形超跑，青蓝霓光线条，内置高频高能激光。',
-            color: 0x06b6d4,
-            bodyHex: '#06b6d4',
-            weaponName: '高能激光',
-            baseSpeed: 13.5,
-            baseHp: 95,
-            weapon: 'laser_cutter',
-            price: 350
-        },
-        {
-            id: 'mower_flamer',
-            name: '烈焰焚草机',
-            desc: '红黄配色联合收割机，前置巨型锯齿拨禾轮与高温喷火。',
-            color: 0xeab308,
-            bodyHex: '#f59e0b',
-            weaponName: '高温喷火',
-            baseSpeed: 9.8,
-            baseHp: 160,
-            weapon: 'flame_jet',
-            price: 500
-        },
-        {
-            id: 'mower_tesla',
-            name: '特斯拉磁爆号',
-            desc: '银色赛博箱式车身，特斯拉车标，周身环绕高压电弧。',
-            color: 0x38bdf8,
-            bodyHex: '#38bdf8',
-            weaponName: '高压电弧',
-            baseSpeed: 10.2,
-            baseHp: 140,
-            weapon: 'tesla_arc',
-            price: 750
-        },
-        {
-            id: 'mower_quantum',
-            name: '量子收割机',
-            desc: '白紫配色科幻战车，前置多重机械收割爪与紫光发光轮。',
-            color: 0xa855f7,
-            bodyHex: '#a855f7',
-            weaponName: '巡航无人机',
-            baseSpeed: 11.8,
-            baseHp: 150,
-            weapon: 'drone_cutter',
-            price: 1000
-        }
-    ];
+    let t=
+      monsterTypes[
+        Math.floor(Math.random()*monsterTypes.length)
+      ];
 
-    const VEHICLE_PARTS = [
-        { id: 'engine', name: '高功率引擎', icon: 'fa-gauge-high', desc: '+6% 战车移动速度', baseCost: 50, costInc: 40, max: 10, key: 'engine' },
-        { id: 'cutters', name: '合金强化切刀', icon: 'fa-scissors', desc: '+10% 割草/伤害范围与威力', baseCost: 60, costInc: 50, max: 10, key: 'cutters' },
-        { id: 'armor', name: '重型车身装甲', icon: 'fa-shield-halved', desc: '+20 初始战车耐久度', baseCost: 40, costInc: 35, max: 10, key: 'armor' },
-        { id: 'magnet', name: '磁力吸拾抓具', icon: 'fa-magnet', desc: '+25% 露珠/金币吸附距离', baseCost: 45, costInc: 35, max: 8, key: 'magnet' },
-        { id: 'tires', name: '越野防滑履带', icon: 'fa-ring', desc: '+8% 转向敏捷度 & 加速', baseCost: 50, costInc: 40, max: 8, key: 'tires' },
-        { id: 'cooler', name: '高压散热加压器', icon: 'fa-snowflake', desc: '-5% 所有割草技能冷却', baseCost: 80, costInc: 60, max: 8, key: 'cooler' }
-    ];
+    let side=Math.floor(Math.random()*4);
 
-    const SKILL_POOL = [
-        { id: 'orbit_blade', name: '环绕旋转刀刃', desc: '在战车四周增加高速运转的切削刀 blade。', icon: 'fa-dharmachakra', color: 'from-emerald-500 to-teal-600', type: 'weapon' },
-        { id: 'flying_scythe', name: '飞旋收割镰刀', desc: '自动向四周发射回旋飞行收割镰。', icon: 'fa-scissors', color: 'from-lime-500 to-emerald-600', type: 'weapon' },
-        { id: 'laser_cutter', name: '高能激光束', desc: '自动锁定最近敌人发射切削光束。', icon: 'fa-bolt-lightning', color: 'from-sky-400 to-blue-600', type: 'weapon' },
-        { id: 'pulse_wave', name: '粉碎震荡环', desc: '释放向外扩散的炸裂震荡切割环。', icon: 'fa-circle-radiation', color: 'from-orange-500 to-amber-600', type: 'weapon' },
-        { id: 'drone_cutter', name: '割草无人机', desc: '召唤巡航无人机跟随并切碎附近野草。', icon: 'fa-paper-plane', color: 'from-indigo-500 to-purple-600', type: 'weapon' },
-        { id: 'flame_jet', name: '高温喷火器', desc: '向前方喷射灼烧锥形火焰。', icon: 'fa-fire', color: 'from-red-500 to-orange-500', type: 'weapon' },
-        { id: 'tesla_arc', name: '高压电弧', desc: '向多个目标弹射电流切削。', icon: 'fa-bolt', color: 'from-purple-500 to-indigo-600', type: 'weapon' },
-        { id: 'stat_speed', name: '涡轮加速引擎', desc: '提升 10% 战车移动速度。', icon: 'fa-gauge-high', color: 'from-yellow-400 to-amber-500', type: 'passive' },
-        { id: 'stat_area', name: '宽幅割草罩', desc: '提升 15% 技能切割与伤害范围。', icon: 'fa-expand', color: 'from-pink-500 to-rose-600', type: 'passive' },
-        { id: 'stat_heal', name: '战车紧急修复', desc: '立即恢复 35% 耐久度，微幅提升上限。', icon: 'fa-kit-medical', color: 'from-emerald-400 to-green-600', type: 'instant' }
-    ];
+    let x,y;
 
-    let gameSave = {
-        coins: 0,
-        unlockedMowers: ['mower_aurora'],
-        selectedMower: 'mower_aurora',
-        parts: { engine: 0, cutters: 0, armor: 0, magnet: 0, tires: 0, cooler: 0 },
-        bestKills: 0
-    };
-
-    function loadSave() {
-        try {
-            const saved = localStorage.getItem('mower_3d_save_v2');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (parsed.coins !== undefined) gameSave.coins = parsed.coins;
-                if (parsed.unlockedMowers) gameSave.unlockedMowers = parsed.unlockedMowers;
-                if (parsed.selectedMower) gameSave.selectedMower = parsed.selectedMower;
-                if (parsed.parts) Object.assign(gameSave.parts, parsed.parts);
-                if (parsed.bestKills) gameSave.bestKills = parsed.bestKills;
-            }
-        } catch(e) {}
+    if(side===0){
+        x=-50;
+        y=Math.random()*innerHeight;
     }
 
-    function saveGame() {
-        try {
-            localStorage.setItem('mower_3d_save_v2', JSON.stringify(gameSave));
-        } catch(e) {}
+    if(side===1){
+        x=innerWidth+50;
+        y=Math.random()*innerHeight;
     }
 
-    loadSave();
-
-    let scene, camera, renderer;
-    let gameRunning = false;
-    let gamePaused = false;
-    let lastTime = 0;
-    let gameTime = 0;
-    let killsCount = 0;
-    let runCoins = 0;
-
-    // Entities
-    let player = null;
-    let grassMeshes = [];
-    let enemies = [];
-    let gems = [];
-    let particleSystems = [];
-    let activeProjectiles = [];
-    let menuShowcasePlatform = null;
-    let menuShowcaseAngle = 0;
-
-    // Inputs
-    const keys = {};
-    let touchJoystick = { active: false, startX: 0, startY: 0, currX: 0, currY: 0, dirX: 0, dirY: 0 };
-
-    const MAP_SIZE = 180;
-
-    function init3DEngine() {
-        const container = document.getElementById('canvas-container');
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0a101d);
-        scene.fog = new THREE.FogExp2(0x0a101d, 0.012);
-
-        const aspect = window.innerWidth / window.innerHeight;
-        camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
-        camera.position.set(0, 32, 32);
-        camera.lookAt(0, 0, 0);
-
-        renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        container.appendChild(renderer.domElement);
-
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
-        scene.add(ambientLight);
-
-        const dirLight = new THREE.DirectionalLight(0xfff7ed, 1.3);
-        dirLight.position.set(40, 60, 30);
-        dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 2048;
-        dirLight.shadow.mapSize.height = 2048;
-        dirLight.shadow.camera.near = 0.5;
-        dirLight.shadow.camera.far = 150;
-        const d = 50;
-        dirLight.shadow.camera.left = -d;
-        dirLight.shadow.camera.right = d;
-        dirLight.shadow.camera.top = d;
-        dirLight.shadow.camera.bottom = -d;
-        scene.add(dirLight);
-
-        // Ground Plane
-        const groundGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE, 32, 32);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x0f2b1d, roughness: 0.9, metalness: 0.1 });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
-        ground.rotation.x = -Math.PI / 2;
-        ground.receiveShadow = true;
-        scene.add(ground);
-
-        // Grid Helper
-        const gridHelper = new THREE.GridHelper(MAP_SIZE, 60, 0x164e33, 0x113824);
-        gridHelper.position.y = 0.02;
-        scene.add(gridHelper);
-
-        // Rotating Pedestal Base for Homepage Showcase
-        const platformGeo = new THREE.CylinderGeometry(4.2, 4.6, 0.4, 32);
-        const platformMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.8 });
-        menuShowcasePlatform = new THREE.Mesh(platformGeo, platformMat);
-        menuShowcasePlatform.position.set(0, 0.2, 0);
-
-        const ringGeo = new THREE.TorusGeometry(4.3, 0.12, 16, 64);
-        const ringMat = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 1.5 });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.rotation.x = Math.PI / 2;
-        ring.position.y = 0.22;
-        menuShowcasePlatform.add(ring);
-
-        scene.add(menuShowcasePlatform);
-
-        window.addEventListener('resize', onWindowResize);
+    if(side===2){
+        x=Math.random()*innerWidth;
+        y=-50;
     }
 
-    function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+    if(side===3){
+        x=Math.random()*innerWidth;
+        y=innerHeight+50;
     }
 
-    function spawnGrassWorld() {
-        grassMeshes.forEach(g => scene.remove(g.mesh));
-        grassMeshes = [];
-
-        const grassGeo = new THREE.ConeGeometry(0.35, 1.2, 4);
-        const grassMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.6 });
-
-        const step = 2.2;
-        for (let x = -MAP_SIZE/2 + 4; x < MAP_SIZE/2 - 4; x += step) {
-            for (let z = -MAP_SIZE/2 + 4; z < MAP_SIZE/2 - 4; z += step) {
-                if (Math.random() < 0.8) {
-                    const mesh = new THREE.Mesh(grassGeo, grassMat);
-                    const rx = x + (Math.random() - 0.5) * 1.2;
-                    const rz = z + (Math.random() - 0.5) * 1.2;
-                    mesh.position.set(rx, 0.6, rz);
-                    mesh.rotation.y = Math.random() * Math.PI;
-                    mesh.castShadow = true;
-                    scene.add(mesh);
-
-                    grassMeshes.push({ mesh, x: rx, z: rz, active: true });
-                }
-            }
-        }
-    }
-
-    function createGlowMat(hexColor, emissiveIntensity = 0.8) {
-        return new THREE.MeshStandardMaterial({
-            color: hexColor,
-            emissive: hexColor,
-            emissiveIntensity: emissiveIntensity,
-            roughness: 0.2,
-            metalness: 0.8
-        });
-    }
-
-    class Player3D {
-        constructor(config) {
-            this.config = config;
-
-            const partArmor = gameSave.parts.armor * 20;
-            const partEngine = 1 + (gameSave.parts.engine * 0.06);
-            const partCutters = 1 + (gameSave.parts.cutters * 0.10);
-            const partMagnet = 1 + (gameSave.parts.magnet * 0.25);
-
-            this.maxHp = config.baseHp + partArmor;
-            this.hp = this.maxHp;
-            this.speed = config.baseSpeed * partEngine;
-            this.pickupRadius = 5.5 * partMagnet;
-            this.statAreaMult = partCutters;
-            this.statCdMult = 1 - (gameSave.parts.cooler * 0.05);
-
-            this.level = 1;
-            this.exp = 0;
-            this.nextLevelExp = 12;
-
-            this.weapons = {};
-            this.addWeapon(config.weapon);
-
-            this.group = new THREE.Group();
-            this.animatedParts = [];
-            this.underglowLight = null;
-
-            this.buildVehicle3DModel(config);
-
-            this.group.position.set(0, 0, 0);
-            scene.add(this.group);
-
-            this.invincibleTimer = 0;
-            this.moveAngle = 0;
-            this.hoverTime = 0;
-        }
-
-        buildVehicle3DModel(config) {
-            const mowerId = config.id;
-
-            if (mowerId === 'mower_aurora') {
-                this.buildAuroraModel(config);
-            } else if (mowerId === 'mower_crusher') {
-                this.buildCrusherModel(config);
-            } else if (mowerId === 'mower_speed') {
-                this.buildSpeedModel(config);
-            } else if (mowerId === 'mower_flamer') {
-                this.buildFlamerModel(config);
-            } else if (mowerId === 'mower_tesla') {
-                this.buildTeslaModel(config);
-            } else if (mowerId === 'mower_quantum') {
-                this.buildQuantumModel(config);
-            } else {
-                this.buildAuroraModel(config);
-            }
-
-            this.underglowLight = new THREE.PointLight(config.color, 3.0, 10);
-            this.underglowLight.position.set(0, 0.4, 0);
-            this.group.add(this.underglowLight);
-        }
-
-        buildAuroraModel(config) {
-            const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15, metalness: 0.85 });
-            const blueMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.2, metalness: 0.8 });
-            const darkGlass = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.9 });
-            const cyanGlow = createGlowMat(0x38bdf8, 2.0);
-
-            const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.55, 3.6), whiteMat);
-            chassis.position.y = 0.55;
-            chassis.castShadow = true;
-            this.group.add(chassis);
-
-            const nose = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.35, 1.2), whiteMat);
-            nose.position.set(0, 0.45, 1.4);
-            this.group.add(nose);
-
-            const splitter = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, 0.6), blueMat);
-            splitter.position.set(0, 0.25, 1.8);
-            this.group.add(splitter);
-
-            [-1.1, 1.1].forEach(x => {
-                const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.45, 3.4), blueMat);
-                skirt.position.set(x, 0.5, 0);
-                this.group.add(skirt);
-            });
-
-            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 1.8), darkGlass);
-            cabin.position.set(0, 0.95, -0.2);
-            this.group.add(cabin);
-
-            this.addWheels(1.15, 1.2, 0.48, 0x38bdf8);
-        }
-
-        buildCrusherModel(config) {
-            const redMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.3, metalness: 0.7 });
-            const darkMetal = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.6, metalness: 0.8 });
-
-            const body = new THREE.Mesh(new THREE.BoxGeometry(2.3, 1.0, 3.4), redMat);
-            body.position.y = 1.35;
-            body.castShadow = true;
-            this.group.add(body);
-
-            const cab = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.85, 1.8), darkMetal);
-            cab.position.set(0, 2.05, -0.2);
-            this.group.add(cab);
-
-            this.addWheels(1.42, 1.15, 0.75, 0xef4444);
-        }
-
-        buildSpeedModel(config) {
-            const carbonMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.1, metalness: 0.95 });
-            const cyanGlow = createGlowMat(0x06b6d4, 2.5);
-
-            const body = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.55, 3.6), carbonMat);
-            body.position.y = 0.55;
-            body.castShadow = true;
-            this.group.add(body);
-
-            [-1.02, 1.02].forEach(x => {
-                const strip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 3.4), cyanGlow);
-                strip.position.set(x, 0.75, 0);
-                this.group.add(strip);
-            });
-
-            this.addWheels(1.1, 1.25, 0.46, 0x06b6d4);
-        }
-
-        buildFlamerModel(config) {
-            const redMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.3 });
-            const yellowMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3 });
-
-            const mainBody = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.6, 2.6), redMat);
-            mainBody.position.set(0, 1.2, -0.3);
-            this.group.add(mainBody);
-
-            const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 3.4, 8), yellowMat);
-            reel.rotation.z = Math.PI / 2;
-            reel.position.set(0, 0.65, 1.7);
-            this.group.add(reel);
-
-            this.addWheels(1.3, 1.0, 0.65, 0xfacc15);
-        }
-
-        buildTeslaModel(config) {
-            const silverMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, roughness: 0.15, metalness: 0.95 });
-            const electricGlow = createGlowMat(0x38bdf8, 2.5);
-
-            const van = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.35, 3.4), silverMat);
-            van.position.set(0, 1.05, -0.1);
-            this.group.add(van);
-
-            const logoBar = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.18, 0.1), electricGlow);
-            logoBar.position.set(0, 0.95, 1.62);
-            this.group.add(logoBar);
-
-            this.addWheels(1.2, 1.15, 0.52, 0x38bdf8);
-        }
-
-        buildQuantumModel(config) {
-            const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1, metalness: 0.85 });
-            const purpleGlow = createGlowMat(0xc084fc, 2.5);
-
-            const core = new THREE.Mesh(new THREE.OctahedronGeometry(1.25, 2), whiteMat);
-            core.scale.set(1.1, 0.65, 1.6);
-            core.position.y = 0.95;
-            this.group.add(core);
-
-            const dome = new THREE.Mesh(new THREE.SphereGeometry(0.65, 16, 12), purpleGlow);
-            dome.position.set(0, 1.35, -0.2);
-            this.group.add(dome);
-
-            this.addWheels(1.32, 1.1, 0.55, 0xc084fc);
-        }
-
-        addWheels(offsetX, offsetZ, radius, glowHex) {
-            const wheelGeo = new THREE.CylinderGeometry(radius, radius, 0.4, 16);
-            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
-            const hubMat = createGlowMat(glowHex, 1.5);
-
-            [ [-offsetX, -offsetZ], [offsetX, -offsetZ], [-offsetX, offsetZ], [offsetX, offsetZ] ].forEach(([wx, wz]) => {
-                const wheelGroup = new THREE.Group();
-                const w = new THREE.Mesh(wheelGeo, wheelMat);
-                w.rotation.z = Math.PI / 2;
-                w.castShadow = true;
-                wheelGroup.add(w);
-
-                const ring = new THREE.Mesh(new THREE.TorusGeometry(radius * 0.75, 0.06, 8, 16), hubMat);
-                ring.rotation.y = Math.PI / 2;
-                ring.position.x = (wx > 0 ? 0.21 : -0.21);
-                wheelGroup.add(ring);
-
-                wheelGroup.position.set(wx, radius, wz);
-                this.group.add(wheelGroup);
-                this.animatedParts.push({ mesh: wheelGroup, type: 'wheel', radius: radius });
-            });
-        }
-
-        addWeapon(id) {
-            if (!this.weapons[id]) this.weapons[id] = { level: 1, timer: 0 };
-            else this.weapons[id].level++;
-        }
-
-        update(dt) {
-            if (this.invincibleTimer > 0) this.invincibleTimer -= dt;
-
-            let dx = 0, dz = 0;
-            if (keys['KeyW'] || keys['ArrowUp']) dz -= 1;
-            if (keys['KeyS'] || keys['ArrowDown']) dz += 1;
-            if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
-            if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
-
-            if (touchJoystick.active) {
-                dx = touchJoystick.dirX;
-                dz = touchJoystick.dirY;
-            }
-
-            const mag = Math.hypot(dx, dz);
-            const isMoving = mag > 0.05;
-
-            if (isMoving) {
-                const nx = (dx / (mag > 1 ? mag : 1)) * this.speed * dt;
-                const nz = (dz / (mag > 1 ? mag : 1)) * this.speed * dt;
-
-                this.group.position.x = Math.max(-MAP_SIZE/2 + 2, Math.min(MAP_SIZE/2 - 2, this.group.position.x + nx));
-                this.group.position.z = Math.max(-MAP_SIZE/2 + 2, Math.min(MAP_SIZE/2 - 2, this.group.position.z + nz));
-
-                this.moveAngle = Math.atan2(dx, dz);
-                this.group.rotation.y = this.moveAngle;
-                this.group.rotation.x = -0.08;
-
-                this.cutGrassInRadius(this.group.position.x, this.group.position.z, 2.5);
-            } else {
-                this.group.rotation.x = 0;
-            }
-
-            this.animatedParts.forEach(p => {
-                if (p.type === 'wheel' && isMoving) p.mesh.rotation.x += (this.speed / p.radius) * dt;
-            });
-
-            camera.position.x = this.group.position.x;
-            camera.position.z = this.group.position.z + 32;
-            camera.lookAt(this.group.position.x, 0, this.group.position.z);
-
-            this.updateWeapons(dt);
-            this.collectGems(dt);
-        }
-
-        cutGrassInRadius(cx, cz, radius) {
-            let cutCount = 0;
-            grassMeshes.forEach(g => {
-                if (g.active) {
-                    const dist = Math.hypot(g.x - cx, g.z - cz);
-                    if (dist <= radius) {
-                        g.active = false;
-                        g.mesh.scale.set(0.01, 0.01, 0.01);
-                        cutCount++;
-                        killsCount++;
-                        spawnLeafParticles(g.x, 0.5, g.z);
-                        if (Math.random() < 0.1) spawnGem(g.x, g.z, 'green', 1);
-                    }
-                }
-            });
-
-            if (cutCount > 0) audio.playCut();
-        }
-
-        updateWeapons(dt) {
-            if (this.weapons['orbit_blade']) {
-                const lvl = this.weapons['orbit_blade'].level;
-                const count = 1 + lvl;
-                const orbitRadius = (3.5 + lvl * 0.5) * this.statAreaMult;
-                const orbitSpeed = gameTime * 3;
-
-                for (let i = 0; i < count; i++) {
-                    const angle = orbitSpeed + (i * (Math.PI * 2 / count));
-                    const bx = this.group.position.x + Math.sin(angle) * orbitRadius;
-                    const bz = this.group.position.z + Math.cos(angle) * orbitRadius;
-
-                    this.cutGrassInRadius(bx, bz, 1.8);
-
-                    enemies.forEach(e => {
-                        if (Math.hypot(e.mesh.position.x - bx, e.mesh.position.z - bz) < e.radius + 1.2) {
-                            e.takeDamage(12 + lvl * 6, bx, bz);
-                        }
-                    });
-                }
-            }
-
-            if (this.weapons['flying_scythe']) {
-                const w = this.weapons['flying_scythe'];
-                w.timer += dt;
-                if (w.timer >= Math.max(0.4, (2.0 - w.level * 0.2) * this.statCdMult)) {
-                    w.timer = 0;
-                    activeProjectiles.push(new Scythe3D(this.group.position.x, this.group.position.z, Math.random() * Math.PI * 2, w.level, this.statAreaMult));
-                }
-            }
-
-            if (this.weapons['laser_cutter']) {
-                const w = this.weapons['laser_cutter'];
-                w.timer += dt;
-                if (w.timer >= Math.max(0.3, (1.2 - w.level * 0.15) * this.statCdMult)) {
-                    const target = getClosestEnemy(this.group.position.x, this.group.position.z, 20);
-                    if (target) {
-                        w.timer = 0;
-                        activeProjectiles.push(new Laser3D(this.group.position.x, this.group.position.z, target, w.level));
-                    }
-                }
-            }
-
-            if (this.weapons['pulse_wave']) {
-                const w = this.weapons['pulse_wave'];
-                w.timer += dt;
-                if (w.timer >= Math.max(0.8, (2.8 - w.level * 0.3) * this.statCdMult)) {
-                    w.timer = 0;
-                    activeProjectiles.push(new Pulse3D(this.group.position.x, this.group.position.z, (6 + w.level * 1.5) * this.statAreaMult, w.level));
-                    audio.playExplode();
-                }
-            }
-
-            if (this.weapons['flame_jet']) {
-                const w = this.weapons['flame_jet'];
-                w.timer += dt;
-                if (w.timer >= 0.15) {
-                    w.timer = 0;
-                    const fAngle = this.moveAngle;
-                    const fx = this.group.position.x + Math.sin(fAngle) * 2.5;
-                    const fz = this.group.position.z + Math.cos(fAngle) * 2.5;
-                    this.cutGrassInRadius(fx, fz, 3.0 * this.statAreaMult);
-
-                    enemies.forEach(e => {
-                        if (Math.hypot(e.mesh.position.x - fx, e.mesh.position.z - fz) < 3.2 * this.statAreaMult) {
-                            e.takeDamage(8 + w.level * 4, fx, fz);
-                        }
-                    });
-                }
-            }
-        }
-
-        collectGems(dt) {
-            const coinMult = 1 + (gameSave.parts.magnet * 0.15);
-            for (let i = gems.length - 1; i >= 0; i--) {
-                const g = gems[i];
-                const dist = Math.hypot(g.mesh.position.x - this.group.position.x, g.mesh.position.z - this.group.position.z);
-                if (dist < this.pickupRadius) {
-                    const dx = this.group.position.x - g.mesh.position.x;
-                    const dz = this.group.position.z - g.mesh.position.z;
-                    g.mesh.position.x += (dx / dist) * 12 * dt;
-                    g.mesh.position.z += (dz / dist) * 12 * dt;
-
-                    if (dist < 1.5) {
-                        if (g.type === 'coin') {
-                            runCoins += Math.round(g.val * coinMult);
-                            audio.playGem();
-                        } else {
-                            this.gainExp(g.val);
-                            audio.playGem();
-                        }
-                        scene.remove(g.mesh);
-                        gems.splice(i, 1);
-                    }
-                }
-            }
-        }
-
-        gainExp(val) {
-            this.exp += val;
-            if (this.exp >= this.nextLevelExp) {
-                this.exp -= this.nextLevelExp;
-                this.level++;
-                this.nextLevelExp = Math.round(this.nextLevelExp * 1.35 + 8);
-                audio.playLevelUp();
-                triggerLevelUpModal();
-            }
-            updateHUD();
-        }
-
-        takeDamage(dmg) {
-            if (this.invincibleTimer > 0) return;
-            this.hp -= dmg;
-            this.invincibleTimer = 0.4;
-            if (this.hp <= 0) {
-                this.hp = 0;
-                gameOver();
-            }
-            updateHUD();
-        }
-    }
-
-    class Scythe3D {
-        constructor(x, z, angle, level, areaMult) {
-            this.x = x;
-            this.z = z;
-            this.angle = angle;
-            this.speed = 18;
-            this.radius = 1.2 * areaMult;
-            this.damage = 22 + level * 8;
-            this.dist = 0;
-            this.maxDist = 18;
-            this.returning = false;
-
-            const geo = new THREE.TorusGeometry(this.radius, 0.2, 8, 16);
-            const mat = new THREE.MeshStandardMaterial({ color: 0xa3e635, emissive: 0x4d7c0f });
-            this.mesh = new THREE.Mesh(geo, mat);
-            this.mesh.rotation.x = Math.PI / 2;
-            this.mesh.position.set(x, 0.8, z);
-            scene.add(this.mesh);
-
-            this.hitSet = new Set();
-        }
-
-        update(dt) {
-            this.mesh.rotation.z += 15 * dt;
-
-            if (!this.returning) {
-                const nx = Math.sin(this.angle) * this.speed * dt;
-                const nz = Math.cos(this.angle) * this.speed * dt;
-                this.x += nx;
-                this.z += nz;
-                this.dist += this.speed * dt;
-                if (this.dist >= this.maxDist) this.returning = true;
-            } else {
-                const angle = Math.atan2(player.group.position.x - this.x, player.group.position.z - this.z);
-                this.x += Math.sin(angle) * (this.speed + 4) * dt;
-                this.z += Math.cos(angle) * (this.speed + 4) * dt;
-
-                if (Math.hypot(player.group.position.x - this.x, player.group.position.z - this.z) < 1.5) {
-                    scene.remove(this.mesh);
-                    return false;
-                }
-            }
-
-            this.mesh.position.set(this.x, 0.8, this.z);
-            player.cutGrassInRadius(this.x, this.z, this.radius);
-
-            enemies.forEach(e => {
-                if (!this.hitSet.has(e.id) && Math.hypot(e.mesh.position.x - this.x, e.mesh.position.z - this.z) < e.radius + this.radius) {
-                    e.takeDamage(this.damage, this.x, this.z);
-                    this.hitSet.add(e.id);
-                }
-            });
-
-            return true;
-        }
-    }
-
-    class Laser3D {
-        constructor(x, z, target, level) {
-            this.life = 0.2;
-            const geo = new THREE.CylinderGeometry(0.15, 0.15, 1, 8);
-            const mat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-            this.mesh = new THREE.Mesh(geo, mat);
-
-            const dx = target.mesh.position.x - x;
-            const dz = target.mesh.position.z - z;
-            const dist = Math.hypot(dx, dz);
-
-            this.mesh.scale.set(1, dist, 1);
-            this.mesh.position.set(x + dx/2, 0.8, z + dz/2);
-            this.mesh.rotation.x = Math.PI / 2;
-            this.mesh.rotation.z = -Math.atan2(dx, dz);
-            scene.add(this.mesh);
-
-            target.takeDamage(30 + level * 15, target.mesh.position.x, target.mesh.position.z);
-            player.cutGrassInRadius(target.mesh.position.x, target.mesh.position.z, 2.5);
-        }
-
-        update(dt) {
-            this.life -= dt;
-            if (this.life <= 0) {
-                scene.remove(this.mesh);
-                return false;
-            }
-            return true;
-        }
-    }
-
-    class Pulse3D {
-        constructor(x, z, maxRadius, level) {
-            this.x = x;
-            this.z = z;
-            this.radius = 0.5;
-            this.maxRadius = maxRadius;
-            this.damage = 35 + level * 15;
-
-            const geo = new THREE.RingGeometry(0.4, 0.6, 32);
-            const mat = new THREE.MeshBasicMaterial({ color: 0xf97316, side: THREE.DoubleSide });
-            this.mesh = new THREE.Mesh(geo, mat);
-            this.mesh.rotation.x = Math.PI / 2;
-            this.mesh.position.set(x, 0.2, z);
-            scene.add(this.mesh);
-
-            this.hitSet = new Set();
-        }
-
-        update(dt) {
-            this.radius += 14 * dt;
-            this.mesh.scale.set(this.radius, this.radius, 1);
-
-            player.cutGrassInRadius(this.x, this.z, this.radius);
-
-            enemies.forEach(e => {
-                if (!this.hitSet.has(e.id) && Math.hypot(e.mesh.position.x - this.x, e.mesh.position.z - this.z) < e.radius + this.radius) {
-                    e.takeDamage(this.damage, this.x, this.z);
-                    this.hitSet.add(e.id);
-                }
-            });
-
-            if (this.radius >= this.maxRadius) {
-                scene.remove(this.mesh);
-                return false;
-            }
-            return true;
-        }
-    }
-
-    let mobCounter = 0;
-    class Enemy3D {
-        constructor(x, z, type) {
-            this.id = ++mobCounter;
-            this.type = type;
-
-            let color = 0x84cc16;
-            this.radius = 0.9;
-
-            if (type === 'weed_boss') {
-                this.radius = 2.2;
-                this.hp = 700 + (gameTime * 18);
-                this.maxHp = this.hp;
-                this.speed = 3.5;
-                this.damage = 25;
-                color = 0xef4444;
-                this.exp = 100;
-                this.isBoss = true;
-            } else if (type === 'weed_fast') {
-                this.radius = 0.7;
-                this.hp = 25 + (gameTime * 0.8);
-                this.maxHp = this.hp;
-                this.speed = 7.5;
-                this.damage = 8;
-                color = 0xeab308;
-                this.exp = 6;
-                this.isBoss = false;
-            } else {
-                this.hp = 45 + (gameTime * 1.2);
-                this.maxHp = this.hp;
-                this.speed = 4.8;
-                this.damage = 12;
-                color = 0x84cc16;
-                this.exp = 3;
-                this.isBoss = false;
-            }
-
-            const geo = new THREE.DodecahedronGeometry(this.radius, 1);
-            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 });
-            this.mesh = new THREE.Mesh(geo, mat);
-            this.mesh.position.set(x, this.radius, z);
-            this.mesh.castShadow = true;
-            scene.add(this.mesh);
-        }
-
-        update(dt) {
-            const dx = player.group.position.x - this.mesh.position.x;
-            const dz = player.group.position.z - this.mesh.position.z;
-            const dist = Math.hypot(dx, dz);
-
-            if (dist > 0.1) {
-                this.mesh.position.x += (dx / dist) * this.speed * dt;
-                this.mesh.position.z += (dz / dist) * this.speed * dt;
-                this.mesh.rotation.y += 2 * dt;
-            }
-
-            if (dist < this.radius + 1.2) {
-                player.takeDamage(this.damage);
-            }
-        }
-
-        takeDamage(dmg, hitX, hitZ) {
-            this.hp -= dmg;
-            const angle = Math.atan2(this.mesh.position.x - hitX, this.mesh.position.z - hitZ);
-            this.mesh.position.x += Math.sin(angle) * 0.8;
-            this.mesh.position.z += Math.cos(angle) * 0.8;
-
-            spawnLeafParticles(this.mesh.position.x, this.mesh.position.y, this.mesh.position.z);
-
-            if (this.hp <= 0) this.die();
-        }
-
-        die() {
-            killsCount++;
-            spawnGem(this.mesh.position.x, this.mesh.position.z, this.isBoss ? 'purple' : 'green', this.exp);
-
-            if (Math.random() < 0.25 || this.isBoss) {
-                const count = this.isBoss ? 8 : 1;
-                for (let i = 0; i < count; i++) {
-                    spawnGem(this.mesh.position.x + (Math.random()-0.5)*2, this.mesh.position.z + (Math.random()-0.5)*2, 'coin', 5);
-                }
-            }
-
-            if (this.isBoss) {
-                document.getElementById('boss-hp-container').classList.add('hidden');
-            }
-            scene.remove(this.mesh);
-        }
-    }
-
-    function spawnGem(x, z, type, val) {
-        const geo = new THREE.OctahedronGeometry(type === 'coin' ? 0.35 : 0.4);
-        const mat = new THREE.MeshStandardMaterial({
-            color: type === 'coin' ? 0xfacc15 : (type === 'purple' ? 0xc084fc : 0x4ade80),
-            emissive: type === 'coin' ? 0x854d0e : 0x15803d
-        });
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set(x, 0.5, z);
-        scene.add(mesh);
-
-        gems.push({ mesh, type, val });
-    }
-
-    function spawnLeafParticles(x, y, z) {
-        for (let i = 0; i < 4; i++) {
-            const p = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), new THREE.MeshBasicMaterial({ color: 0x4ade80 }));
-            p.position.set(x, y, z);
-            scene.add(p);
-
-            const vx = (Math.random() - 0.5) * 4;
-            const vy = Math.random() * 3 + 1;
-            const vz = (Math.random() - 0.5) * 4;
-
-            particleSystems.push({ mesh: p, vx, vy, vz, life: 0.35 });
-        }
-    }
-
-    function getClosestEnemy(x, z, maxDist) {
-        let closest = null;
-        let minDist = maxDist;
-        enemies.forEach(e => {
-            const d = Math.hypot(e.mesh.position.x - x, e.mesh.position.z - z);
-            if (d < minDist) {
-                minDist = d;
-                closest = e;
-            }
-        });
-        return closest;
-    }
-
-    let spawnTimer = 0;
-    let bossMarked = [];
-
-    function updateSpawner(dt) {
-        spawnTimer += dt;
-        const interval = Math.max(0.3, 1.6 - (gameTime / 100));
-
-        if (spawnTimer >= interval) {
-            spawnTimer = 0;
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 28;
-            const ex = player.group.position.x + Math.sin(angle) * dist;
-            const ez = player.group.position.z + Math.cos(angle) * dist;
-
-            const isFast = Math.random() < 0.35;
-            enemies.push(new Enemy3D(ex, ez, isFast ? 'weed_fast' : 'weed_normal'));
-        }
-
-        const bMark = Math.floor(gameTime / 90);
-        if (bMark > 0 && !bossMarked.includes(bMark)) {
-            bossMarked.push(bMark);
-            const boss = new Enemy3D(player.group.position.x + 15, player.group.position.z + 15, 'weed_boss');
-            enemies.push(boss);
-            document.getElementById('boss-hp-container').classList.remove('hidden');
-        }
-
-        const boss = enemies.find(e => e.isBoss);
-        if (boss) {
-            const bar = document.getElementById('boss-hp-bar');
-            if (bar) bar.style.width = `${Math.max(0, (boss.hp / boss.maxHp) * 100)}%`;
-        }
-    }
-
-    function gameLoop(time) {
-        const dt = Math.min(0.1, (time - lastTime) / 1000);
-        lastTime = time;
-
-        if (gameRunning) {
-            if (!gamePaused) {
-                gameTime += dt;
-
-                if (menuShowcasePlatform) menuShowcasePlatform.visible = false;
-
-                player.update(dt);
-                updateSpawner(dt);
-
-                for (let i = enemies.length - 1; i >= 0; i--) {
-                    const e = enemies[i];
-                    e.update(dt);
-                    if (e.hp <= 0) enemies.splice(i, 1);
-                }
-
-                for (let i = activeProjectiles.length - 1; i >= 0; i--) {
-                    if (!activeProjectiles[i].update(dt)) activeProjectiles.splice(i, 1);
-                }
-
-                for (let i = particleSystems.length - 1; i >= 0; i--) {
-                    const p = particleSystems[i];
-                    p.mesh.position.x += p.vx * dt;
-                    p.mesh.position.y += p.vy * dt;
-                    p.mesh.position.z += p.vz * dt;
-                    p.life -= dt;
-
-                    if (p.life <= 0) {
-                        scene.remove(p.mesh);
-                        particleSystems.splice(i, 1);
-                    }
-                }
-
-                updateHUD();
-            }
-        } else {
-            // Main Menu 3D Showcase Pedestal Mode
-            menuShowcaseAngle += 1.2 * dt;
-            if (menuShowcasePlatform) {
-                menuShowcasePlatform.visible = true;
-                menuShowcasePlatform.rotation.y = menuShowcaseAngle * 0.5;
-            }
-
-            if (player) {
-                player.group.position.set(0, 0.45, 0);
-                player.group.rotation.y = menuShowcaseAngle;
-                camera.position.set(0, 6, 12);
-                camera.lookAt(0, 1.2, 0);
-            }
-        }
-
-        renderer.render(scene, camera);
-        requestAnimationFrame(gameLoop);
-    }
-
-    function updateHUD() {
-        document.getElementById('hud-level').innerText = `LV.${player.level}`;
-        document.getElementById('hud-exp-bar').style.width = `${(player.exp / player.nextLevelExp) * 100}%`;
-        document.getElementById('hud-exp-text').innerText = `${player.exp} / ${player.nextLevelExp}`;
-
-        const mins = Math.floor(gameTime / 60).toString().padStart(2, '0');
-        const secs = Math.floor(gameTime % 60).toString().padStart(2, '0');
-        document.getElementById('hud-time').innerText = `${mins}:${secs}`;
-        document.getElementById('hud-kills').innerText = `割草量: ${killsCount}`;
-        document.getElementById('hud-coins').innerText = `${runCoins}`;
-
-        document.getElementById('hud-hp-text').innerText = `${Math.ceil(player.hp)}/${player.maxHp}`;
-        document.getElementById('hud-hp-bar').style.width = `${Math.max(0, (player.hp / player.maxHp) * 100)}%`;
-    }
-
-    function triggerLevelUpModal() {
-        gamePaused = true;
-
-        const shuffled = [...SKILL_POOL].sort(() => Math.random() - 0.5);
-        const options = shuffled.slice(0, 3);
-
-        const container = document.getElementById('upgrade-cards-container');
-        container.innerHTML = '';
-
-        options.forEach(skill => {
-            const currentLvl = player.weapons[skill.id] ? player.weapons[skill.id].level : 0;
-            const card = document.createElement('div');
-            card.className = `glass-card rounded-2xl p-4 flex flex-col justify-between items-center text-center cursor-pointer bg-slate-900/90`;
-            card.innerHTML = `
-                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br ${skill.color} flex items-center justify-center text-xl text-white shadow-lg mb-2">
-                    <i class="fa-solid ${skill.icon}"></i>
-                </div>
-                <div class="text-[11px] font-bold text-emerald-400 mb-1">${currentLvl > 0 ? `LV.${currentLvl} ➔ LV.${currentLvl + 1}` : '【全新战术特技】'}</div>
-                <h3 class="font-bold text-white text-sm mb-1">${skill.name}</h3>
-                <p class="text-xs text-slate-300 mb-3 flex-1">${skill.desc}</p>
-                <button class="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition">
-                    选择特技
-                </button>
-            `;
-
-            card.onclick = () => {
-                applySkill(skill);
-                document.getElementById('modal-upgrade').classList.add('hidden');
-                gamePaused = false;
-            };
-
-            container.appendChild(card);
-        });
-
-        document.getElementById('modal-upgrade').classList.remove('hidden');
-    }
-
-    function applySkill(skill) {
-        if (skill.type === 'weapon') {
-            player.addWeapon(skill.id);
-        } else if (skill.id === 'stat_speed') {
-            player.speed *= 1.10;
-        } else if (skill.id === 'stat_area') {
-            player.statAreaMult += 0.15;
-        } else if (skill.id === 'stat_heal') {
-            player.maxHp += 20;
-            player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.35);
-        }
-    }
-
-    function startGame() {
-        audio.init();
-
-        const mowerConfig = MOWER_TYPES.find(m => m.id === gameSave.selectedMower);
-
-        gameTime = 0;
-        killsCount = 0;
-        runCoins = 0;
-        enemies.forEach(e => scene.remove(e.mesh));
-        gems.forEach(g => scene.remove(g.mesh));
-        activeProjectiles.forEach(p => scene.remove(p.mesh));
-        particleSystems.forEach(p => scene.remove(p.mesh));
-
-        enemies = [];
-        gems = [];
-        activeProjectiles = [];
-        particleSystems = [];
-        bossMarked = [];
-
-        if (player) scene.remove(player.group);
-
-        spawnGrassWorld();
-        player = new Player3D(mowerConfig);
-
-        document.getElementById('screen-menu').classList.add('hidden');
-        document.getElementById('game-hud').classList.remove('hidden');
-        document.getElementById('joystick-zone').classList.remove('hidden');
-
-        gameRunning = true;
-        gamePaused = false;
-        lastTime = performance.now();
-    }
-
-    function gameOver() {
-        gamePaused = true;
-        gameSave.coins += runCoins;
-        if (killsCount > gameSave.bestKills) gameSave.bestKills = killsCount;
-        saveGame();
-
-        const mins = Math.floor(gameTime / 60).toString().padStart(2, '0');
-        const secs = Math.floor(gameTime % 60).toString().padStart(2, '0');
-
-        document.getElementById('go-kills').innerText = killsCount;
-        document.getElementById('go-coins').innerText = `+${runCoins}`;
-        document.getElementById('go-time').innerText = `${mins}:${secs}`;
-        document.getElementById('go-level').innerText = `LV.${player.level}`;
-
-        document.getElementById('modal-gameover').classList.remove('hidden');
-    }
-
-    function updateMenuShowcaseVehicle() {
-        if (player) scene.remove(player.group);
-        const mowerConfig = MOWER_TYPES.find(m => m.id === gameSave.selectedMower);
-        player = new Player3D(mowerConfig);
-
-        // Update Showcase Info Box
-        document.getElementById('showcase-title').innerText = mowerConfig.name;
-        document.getElementById('showcase-desc').innerText = mowerConfig.desc;
-        document.getElementById('showcase-hp').innerText = mowerConfig.baseHp;
-        document.getElementById('showcase-speed').innerText = mowerConfig.baseSpeed;
-        document.getElementById('showcase-weapon').innerText = mowerConfig.weaponName;
-        document.getElementById('menu-coins').innerText = gameSave.coins;
-    }
-
-    function renderMowerSelection() {
-        const container = document.getElementById('mower-select-container');
-        container.innerHTML = '';
-
-        document.getElementById('menu-coins').innerText = gameSave.coins;
-
-        MOWER_TYPES.forEach(m => {
-            const isUnlocked = gameSave.unlockedMowers.includes(m.id);
-            const isSelected = m.id === gameSave.selectedMower;
-
-            const card = document.createElement('div');
-            card.className = `glass-card p-2.5 rounded-2xl border ${isSelected ? 'active-card' : 'border-slate-800'} flex flex-col items-center cursor-pointer relative group`;
-            card.innerHTML = `
-                <div class="w-full h-14 rounded-xl bg-slate-900/80 border border-slate-700/60 flex items-center justify-center p-1 mb-1.5 overflow-hidden shadow-inner relative">
-                    ${VEHICLE_SVG_ART[m.id] || ''}
-                </div>
-                <div class="font-black text-xs text-white text-center line-clamp-1">${m.name}</div>
-                <div class="text-[10px] text-slate-400 text-center mt-0.5">HP:${m.baseHp} | 速度:${m.baseSpeed}</div>
-                ${!isUnlocked ? `
-                    <div class="mt-2 text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2.5 py-0.5 rounded-full border border-amber-500/40">
-                        <i class="fa-solid fa-coins mr-1"></i>${m.price} 解锁
-                    </div>
-                ` : (isSelected ? `
-                    <div class="mt-2 text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/40">
-                        <i class="fa-solid fa-check mr-1"></i>已选择出战
-                    </div>
-                ` : `
-                    <div class="mt-2 text-[10px] bg-slate-800 text-slate-300 font-bold px-2.5 py-0.5 rounded-full border border-slate-700 group-hover:bg-emerald-600 group-hover:text-white transition">
-                        选择
-                    </div>
-                `)}
-            `;
-
-            card.onclick = () => {
-                if (isUnlocked) {
-                    gameSave.selectedMower = m.id;
-                    saveGame();
-                    renderMowerSelection();
-                    updateMenuShowcaseVehicle();
-                } else if (gameSave.coins >= m.price) {
-                    gameSave.coins -= m.price;
-                    gameSave.unlockedMowers.push(m.id);
-                    gameSave.selectedMower = m.id;
-                    saveGame();
-                    renderMowerSelection();
-                    updateMenuShowcaseVehicle();
-                }
-            };
-
-            container.appendChild(card);
-        });
-    }
-
-    function renderGarage() {
-        document.getElementById('garage-coins').innerText = gameSave.coins;
-
-        const mowerConfig = MOWER_TYPES.find(m => m.id === gameSave.selectedMower);
-
-        const summaryBox = document.getElementById('garage-stats-summary');
-        summaryBox.innerHTML = `
-            <div class="flex flex-col items-center"><span class="text-slate-400">当前战车</span><span class="font-bold text-white">${mowerConfig.name}</span></div>
-            <div class="flex flex-col items-center"><span class="text-slate-400">引擎等级</span><span class="font-bold text-emerald-400">LV.${gameSave.parts.engine}</span></div>
-            <div class="flex flex-col items-center"><span class="text-slate-400">装甲等级</span><span class="font-bold text-blue-400">LV.${gameSave.parts.armor}</span></div>
-            <div class="flex flex-col items-center"><span class="text-slate-400">切刀威力</span><span class="font-bold text-amber-400">LV.${gameSave.parts.cutters}</span></div>
-            <div class="flex flex-col items-center"><span class="text-slate-400">磁力吸引</span><span class="font-bold text-purple-400">LV.${gameSave.parts.magnet}</span></div>
-            <div class="flex flex-col items-center"><span class="text-slate-400">冷却散热</span><span class="font-bold text-sky-400">LV.${gameSave.parts.cooler}</span></div>
-        `;
-
-        const list = document.getElementById('garage-parts-list');
-        list.innerHTML = '';
-
-        VEHICLE_PARTS.forEach(part => {
-            const currentLvl = gameSave.parts[part.key] || 0;
-            const cost = part.baseCost + currentLvl * part.costInc;
-            const isMax = currentLvl >= part.max;
-
-            const item = document.createElement('div');
-            item.className = `glass-card p-3 rounded-2xl flex items-center justify-between border border-slate-800`;
-            item.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-amber-400 text-base border border-slate-700">
-                        <i class="fa-solid ${part.icon}"></i>
-                    </div>
-                    <div>
-                        <div class="font-bold text-xs text-white">${part.name} <span class="text-emerald-400 text-[10px]">LV.${currentLvl}/${part.max}</span></div>
-                        <div class="text-[11px] text-slate-400">${part.desc}</div>
-                    </div>
-                </div>
-                <button class="px-3.5 py-1.5 ${isMax ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : (gameSave.coins >= cost ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950' : 'bg-slate-800 text-slate-400')} font-black text-xs rounded-xl border border-slate-700 transition">
-                    ${isMax ? '已满级' : `<i class="fa-solid fa-coins mr-1"></i>${cost}`}
-                </button>
-            `;
-
-            if (!isMax) {
-                item.querySelector('button').onclick = () => {
-                    if (gameSave.coins >= cost) {
-                        gameSave.coins -= cost;
-                        gameSave.parts[part.key] = currentLvl + 1;
-                        saveGame();
-                        renderGarage();
-                    }
-                };
-            }
-
-            list.appendChild(item);
-        });
-    }
-
-    window.addEventListener('keydown', e => { keys[e.code] = true; });
-    window.addEventListener('keyup', e => { keys[e.code] = false; });
-
-    const joyZone = document.getElementById('joystick-zone');
-    const joyBase = document.getElementById('joystick-base');
-    const joyStick = document.getElementById('joystick-stick');
-
-    joyZone.addEventListener('touchstart', e => {
-        audio.init();
-        const touch = e.touches[0];
-        touchJoystick.active = true;
-        touchJoystick.startX = touch.clientX;
-        touchJoystick.startY = touch.clientY;
-
-        joyBase.style.left = `${touch.clientX}px`;
-        joyBase.style.top = `${touch.clientY}px`;
-        joyBase.classList.remove('hidden');
+    monsters.push({
+        ...t,
+        x,
+        y,
+        maxhp:t.hp,
+        rage:false
+    });
+}
+
+function spawnBoss(){
+
+    monsters.push({
+        type:"boss",
+        name:"微观大魔王",
+        x:innerWidth/2,
+        y:-120,
+        hp:1200,
+        maxhp:1200,
+        speed:.45,
+        size:75,
+        rage:false
     });
 
-    joyZone.addEventListener('touchmove', e => {
-        if (!touchJoystick.active) return;
-        const touch = e.touches[0];
-        const dx = touch.clientX - touchJoystick.startX;
-        const dy = touch.clientY - touchJoystick.startY;
-        const dist = Math.hypot(dx, dy);
-        const maxDist = 45;
-        const angle = Math.atan2(dy, dx);
-        const moveDist = Math.min(dist, maxDist);
+    document.getElementById("bossBar").style.display="block";
+}
 
-        joyStick.style.transform = `translate(calc(-50% + ${Math.cos(angle) * moveDist}px), calc(-50% + ${Math.sin(angle) * moveDist}px))`;
+function drawGrid(){
 
-        touchJoystick.dirX = Math.cos(angle);
-        touchJoystick.dirY = Math.sin(angle);
+    ctx.save();
+
+    ctx.translate(innerWidth/2,innerHeight/2);
+
+    /*
+       45° 等距视觉
+       两条基准轴分别向左下和右下延伸
+    */
+
+    const size=55;
+
+    for(let x=-1200;x<1200;x+=size){
+
+        ctx.beginPath();
+        ctx.moveTo(x,-900);
+        ctx.lineTo(x+900,0);
+        ctx.lineTo(x,900);
+        ctx.lineTo(x-900,0);
+        ctx.closePath();
+
+        ctx.strokeStyle="rgba(100,220,120,.08)";
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+function drawPlayer(){
+
+    ctx.save();
+
+    ctx.translate(player.x,player.y);
+
+    ctx.rotate(-Math.PI/4);
+
+    // 战车阴影
+    ctx.fillStyle="rgba(0,0,0,.35)";
+    ctx.beginPath();
+    ctx.ellipse(0,15,38,20,0,0,Math.PI*2);
+    ctx.fill();
+
+    // 车身
+    ctx.fillStyle="#2f8cff";
+    ctx.fillRect(-30,-20,60,40);
+
+    // 装甲
+    ctx.fillStyle="#65b5ff";
+    ctx.fillRect(-22,-15,44,30);
+
+    // 炮台
+    ctx.fillStyle="#d9f2ff";
+    ctx.beginPath();
+    ctx.arc(0,0,14,0,Math.PI*2);
+    ctx.fill();
+
+    // 炮管
+    ctx.fillStyle="#9aa8b5";
+    ctx.fillRect(5,-5,35,10);
+
+    // 车轮
+    ctx.fillStyle="#111";
+    ctx.fillRect(-35,-25,12,12);
+    ctx.fillRect(23,-25,12,12);
+    ctx.fillRect(-35,13,12,12);
+    ctx.fillRect(23,13,12,12);
+
+    ctx.restore();
+}
+
+function drawMonster(m){
+
+    ctx.save();
+    ctx.translate(m.x,m.y);
+
+    let s=m.size;
+
+    // 阴影
+    ctx.fillStyle="rgba(0,0,0,.3)";
+    ctx.beginPath();
+    ctx.ellipse(0,s*.65,s,s*.35,0,0,Math.PI*2);
+    ctx.fill();
+
+    if(m.type==="helmet"){
+        drawHelmet(s);
+    }
+
+    if(m.type==="purple"){
+        drawPurple(s);
+    }
+
+    if(m.type==="yellow"){
+        drawYellow(s);
+    }
+
+    if(m.type==="blue"){
+        drawBlue(s);
+    }
+
+    if(m.type==="red"){
+        drawRed(s,m);
+    }
+
+    if(m.type==="boss"){
+        drawBoss(s);
+    }
+
+    ctx.restore();
+}
+
+function eyes(){
+    ctx.fillStyle="#111";
+
+    ctx.beginPath();
+    ctx.arc(-5,-2,3,0,Math.PI*2);
+    ctx.arc(5,-2,3,0,Math.PI*2);
+    ctx.fill();
+}
+
+function drawHelmet(s){
+
+    ctx.fillStyle="#35a853";
+    ctx.fillRect(-s*.55,-s*.9,s*1.1,s*1.7);
+
+    ctx.fillStyle="#55c96b";
+    ctx.fillRect(-s*.45,-s*.75,s*.9,s*.55);
+
+    // 安全帽
+    ctx.fillStyle="#ffd21c";
+    ctx.beginPath();
+    ctx.arc(0,-s*.75,s*.65,Math.PI,0);
+    ctx.fill();
+
+    ctx.fillRect(-s*.72,-s*.75,s*1.44,7);
+
+    eyes();
+
+    // 小铲子
+    ctx.strokeStyle="#9a6b3a";
+    ctx.lineWidth=5;
+    ctx.beginPath();
+    ctx.moveTo(s*.65,-2);
+    ctx.lineTo(s*1.3,s*.7);
+    ctx.stroke();
+
+    ctx.fillStyle="#aaa";
+    ctx.beginPath();
+    ctx.moveTo(s*1.25,s*.65);
+    ctx.lineTo(s*1.55,s*.8);
+    ctx.lineTo(s*1.25,s*1);
+    ctx.closePath();
+    ctx.fill();
+}
+
+function drawPurple(s){
+
+    let grad=ctx.createRadialGradient(
+        -s*.3,-s*.3,2,
+        0,0,s
+    );
+
+    grad.addColorStop(0,"#e6b7ff");
+    grad.addColorStop(.45,"#a855f7");
+    grad.addColorStop(1,"#5b21b6");
+
+    ctx.fillStyle=grad;
+    ctx.beginPath();
+    ctx.arc(0,0,s,0,Math.PI*2);
+    ctx.fill();
+
+    eyes();
+
+    // 公文包
+    ctx.fillStyle="#4b2a63";
+    ctx.fillRect(s*.7,0,s*.7,s*.5);
+
+    ctx.strokeStyle="#e6c07b";
+    ctx.lineWidth=2;
+    ctx.strokeRect(s*.8,s*.05,s*.5,s*.35);
+}
+
+function drawYellow(s){
+
+    ctx.fillStyle="#ffe34d";
+    ctx.beginPath();
+    ctx.arc(0,0,s,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle="#fff4a3";
+    ctx.beginPath();
+    ctx.arc(-s*.35,-s*.35,s*.25,0,Math.PI*2);
+    ctx.fill();
+
+    eyes();
+}
+
+function drawBlue(s){
+
+    ctx.strokeStyle="#42c8ff";
+    ctx.lineWidth=6;
+
+    ctx.beginPath();
+
+    for(let i=0;i<18;i++){
+
+        let a=i*.7;
+        let r=s*(i/18);
+
+        let x=Math.cos(a)*r;
+        let y=Math.sin(a)*r;
+
+        if(i===0) ctx.moveTo(x,y);
+        else ctx.lineTo(x,y);
+    }
+
+    ctx.stroke();
+
+    ctx.fillStyle="#8de8ff";
+    ctx.beginPath();
+    ctx.arc(0,0,5,0,Math.PI*2);
+    ctx.fill();
+}
+
+function drawRed(s,m){
+
+    ctx.fillStyle=m.rage?"#ff4b16":"#ef5b2a";
+
+    ctx.beginPath();
+    ctx.arc(0,0,s,0,Math.PI*2);
+    ctx.fill();
+
+    // 刺
+    ctx.strokeStyle="#ffb000";
+    ctx.lineWidth=4;
+
+    for(let i=0;i<8;i++){
+
+        let a=i*Math.PI/4;
+
+        ctx.beginPath();
+        ctx.moveTo(
+            Math.cos(a)*s*.8,
+            Math.sin(a)*s*.8
+        );
+
+        ctx.lineTo(
+            Math.cos(a)*s*1.35,
+            Math.sin(a)*s*1.35
+        );
+
+        ctx.stroke();
+    }
+
+    eyes();
+}
+
+function drawBoss(s){
+
+    // 彩色光环
+    let grad=ctx.createRadialGradient(
+        0,0,10,
+        0,0,s*1.7
+    );
+
+    grad.addColorStop(0,"rgba(255,255,255,.8)");
+    grad.addColorStop(.25,"rgba(255,0,255,.45)");
+    grad.addColorStop(.5,"rgba(0,220,255,.35)");
+    grad.addColorStop(1,"rgba(120,0,255,0)");
+
+    ctx.fillStyle=grad;
+
+    ctx.beginPath();
+    ctx.arc(0,0,s*1.7,0,Math.PI*2);
+    ctx.fill();
+
+    // 母体
+    let body=ctx.createRadialGradient(
+        -s*.3,-s*.4,5,
+        0,0,s
+    );
+
+    body.addColorStop(0,"#ffdf7e");
+    body.addColorStop(.35,"#ff4fd8");
+    body.addColorStop(.7,"#753cff");
+    body.addColorStop(1,"#27136b");
+
+    ctx.fillStyle=body;
+
+    ctx.beginPath();
+    ctx.arc(0,0,s,0,Math.PI*2);
+    ctx.fill();
+
+    // 多核心
+    for(let i=0;i<5;i++){
+
+        let a=i*Math.PI*2/5;
+        let x=Math.cos(a)*s*.42;
+        let y=Math.sin(a)*s*.42;
+
+        ctx.fillStyle="#70faff";
+
+        ctx.beginPath();
+        ctx.arc(x,y,s*.13,0,Math.PI*2);
+        ctx.fill();
+    }
+
+    eyes();
+}
+
+function shoot(){
+
+    let nearest=null;
+    let dist=Infinity;
+
+    for(const m of monsters){
+
+        let dx=m.x-player.x;
+        let dy=m.y-player.y;
+        let d=Math.hypot(dx,dy);
+
+        if(d<dist){
+            dist=d;
+            nearest=m;
+        }
+    }
+
+    let angle=nearest
+        ?Math.atan2(nearest.y-player.y,nearest.x-player.x)
+        :player.angle;
+
+    bullets.push({
+        x:player.x,
+        y:player.y,
+        vx:Math.cos(angle)*10,
+        vy:Math.sin(angle)*10,
+        life:80,
+        damage:25
+    });
+}
+
+function update(){
+
+    frame++;
+
+    let dx=0;
+    let dy=0;
+
+    if(keys.w)dy-=1;
+    if(keys.s)dy+=1;
+    if(keys.a)dx-=1;
+    if(keys.d)dx+=1;
+
+    if(dx||dy){
+
+        let len=Math.hypot(dx,dy);
+
+        dx/=len;
+        dy/=len;
+
+        player.x+=dx*player.speed;
+        player.y+=dy*player.speed;
+
+        player.angle=Math.atan2(dy,dx);
+    }
+
+    player.x=Math.max(35,Math.min(innerWidth-35,player.x));
+    player.y=Math.max(35,Math.min(innerHeight-35,player.y));
+
+    // 子弹
+    for(let i=bullets.length-1;i>=0;i--){
+
+        let b=bullets[i];
+
+        b.x+=b.vx;
+        b.y+=b.vy;
+        b.life--;
+
+        let hit=false;
+
+        for(let j=monsters.length-1;j>=0;j--){
+
+            let m=monsters[j];
+
+            if(Math.hypot(b.x-m.x,b.y-m.y)<m.size){
+
+                m.hp-=b.damage;
+                hit=true;
+
+                createParticles(m.x,m.y);
+
+                if(m.type==="red" && m.hp<m.maxhp*.6){
+                    m.rage=true;
+                    m.speed=2.4;
+                }
+
+                if(m.hp<=0){
+
+                    kills++;
+
+                    if(m.type==="boss"){
+                        document.getElementById("bossBar")
+                        .style.display="none";
+
+                        alert("🎉 恭喜！你击败了微观大魔王！");
+                    }
+
+                    monsters.splice(j,1);
+
+                    if(kills%10===0){
+                        level++;
+                        player.speed+=.3;
+                    }
+                }
+
+                break;
+            }
+        }
+
+        if(hit || b.life<=0){
+            bullets.splice(i,1);
+        }
+    }
+
+    // 怪物
+    for(const m of monsters){
+
+        let dx=player.x-m.x;
+        let dy=player.y-m.y;
+
+        let d=Math.hypot(dx,dy);
+
+        if(d>1){
+
+            m.x+=dx/d*m.speed;
+            m.y+=dy/d*m.speed;
+        }
+
+        if(d<m.size+25){
+
+            player.hp-=0.08;
+
+            if(player.hp<=0){
+
+                player.hp=100;
+                kills=0;
+                level=1;
+                monsters=[];
+                alert("💥 战车被摧毁了！");
+            }
+        }
+    }
+
+    // 定时生成
+    if(frame%45===0){
+        randomMonster();
+    }
+
+    // BOSS
+    if(kills>=30 &&
+       !monsters.some(m=>m.type==="boss")){
+        spawnBoss();
+    }
+
+    if(monsters.some(m=>m.type==="boss")){
+
+        let boss=monsters.find(m=>m.type==="boss");
+
+        document.getElementById("bossHP")
+        .style.width=
+        Math.max(0,boss.hp/boss.maxhp*100)+"%";
+    }
+
+    // 粒子
+    for(let i=particles.length-1;i>=0;i--){
+
+        let p=particles[i];
+
+        p.x+=p.vx;
+        p.y+=p.vy;
+
+        p.life--;
+
+        if(p.life<=0){
+            particles.splice(i,1);
+        }
+    }
+
+    document.getElementById("hp").textContent=
+      Math.max(0,Math.floor(player.hp));
+
+    document.getElementById("kills").textContent=kills;
+
+    document.getElementById("level").textContent=level;
+}
+
+function createParticles(x,y){
+
+    for(let i=0;i<8;i++){
+
+        particles.push({
+            x,
+            y,
+            vx:(Math.random()-.5)*4,
+            vy:(Math.random()-.5)*4,
+            life:30
+        });
+    }
+}
+
+function draw(){
+
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+
+    drawGrid();
+
+    // 草
+    for(let i=0;i<70;i++){
+
+        let x=(i*137)%innerWidth;
+        let y=(i*83)%innerHeight;
+
+        ctx.strokeStyle="rgba(100,220,100,.35)";
+        ctx.beginPath();
+        ctx.moveTo(x,y);
+        ctx.lineTo(x+3,y-8);
+        ctx.stroke();
+    }
+
+    // 子弹
+    for(const b of bullets){
+
+        ctx.fillStyle="#fff36b";
+
+        ctx.shadowBlur=15;
+        ctx.shadowColor="#00eaff";
+
+        ctx.beginPath();
+        ctx.arc(b.x,b.y,5,0,Math.PI*2);
+        ctx.fill();
+
+        ctx.shadowBlur=0;
+    }
+
+    for(const p of particles){
+
+        ctx.fillStyle="rgba(100,255,150,"+
+          Math.max(0,p.life/30)+")";
+
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,3,0,Math.PI*2);
+        ctx.fill();
+    }
+
+    for(const m of monsters){
+        drawMonster(m);
+    }
+
+    drawPlayer();
+}
+
+function loop(){
+
+    update();
+    draw();
+
+    requestAnimationFrame(loop);
+}
+
+document.addEventListener("keydown",e=>{
+
+    let k=e.key.toLowerCase();
+
+    if(k in keys){
+        keys[k]=true;
+    }
+
+    if(e.code==="Space"){
+        shoot();
+    }
+});
+
+document.addEventListener("keyup",e=>{
+
+    let k=e.key.toLowerCase();
+
+    if(k in keys){
+        keys[k]=false;
+    }
+});
+
+// 手机按钮
+document.querySelectorAll(".control")
+.forEach(btn=>{
+
+    const key=btn.dataset.key;
+
+    btn.addEventListener("pointerdown",()=>{
+        keys[key]=true;
     });
 
-    const resetJoystick = () => {
-        touchJoystick.active = false;
-        touchJoystick.dirX = 0;
-        touchJoystick.dirY = 0;
-        joyBase.classList.add('hidden');
-    };
-    joyZone.addEventListener('touchend', resetJoystick);
-    joyZone.addEventListener('touchcancel', resetJoystick);
+    btn.addEventListener("pointerup",()=>{
+        keys[key]=false;
+    });
 
-    document.getElementById('btn-start-game').onclick = startGame;
-    document.getElementById('btn-open-garage').onclick = () => {
-        renderGarage();
-        document.getElementById('modal-garage').classList.remove('hidden');
-    };
-    document.getElementById('btn-close-garage').onclick = () => {
-        document.getElementById('modal-garage').classList.add('hidden');
-        renderMowerSelection();
-        updateMenuShowcaseVehicle();
-    };
-    document.getElementById('btn-reset-save').onclick = () => {
-        if (confirm('确认要重置所有割草金币与零件升级吗？')) {
-            localStorage.removeItem('mower_3d_save_v2');
-            gameSave = { coins: 0, unlockedMowers: ['mower_aurora'], selectedMower: 'mower_aurora', parts: { engine:0, cutters:0, armor:0, magnet:0, tires:0, cooler:0 }, bestKills: 0 };
-            renderGarage();
-            renderMowerSelection();
-            updateMenuShowcaseVehicle();
-        }
-    };
-    document.getElementById('btn-pause').onclick = () => {
-        gamePaused = true;
-        const mins = Math.floor(gameTime / 60).toString().padStart(2, '0');
-        const secs = Math.floor(gameTime % 60).toString().padStart(2, '0');
-        document.getElementById('pause-time').innerText = `${mins}:${secs}`;
-        document.getElementById('pause-kills').innerText = killsCount;
-        document.getElementById('pause-weapons').innerText = Object.keys(player.weapons).length;
-        document.getElementById('modal-pause').classList.remove('hidden');
-    };
-    document.getElementById('btn-resume').onclick = () => {
-        document.getElementById('modal-pause').classList.add('hidden');
-        gamePaused = false;
-    };
-    document.getElementById('btn-quit').onclick = () => {
-        gameRunning = false;
-        document.getElementById('modal-pause').classList.add('hidden');
-        document.getElementById('game-hud').classList.add('hidden');
-        document.getElementById('joystick-zone').classList.add('hidden');
-        document.getElementById('screen-menu').classList.remove('hidden');
-        renderMowerSelection();
-        updateMenuShowcaseVehicle();
-    };
-    document.getElementById('btn-restart').onclick = () => {
-        document.getElementById('modal-gameover').classList.add('hidden');
-        startGame();
+    btn.addEventListener("pointerleave",()=>{
+        keys[key]=false;
+    });
+});
+
+document.getElementById("shootBtn")
+.addEventListener("pointerdown",shoot);
+
+// 图鉴
+document.getElementById("bookBtn")
+.addEventListener("click",()=>{
+
+    document.getElementById("encyclopedia")
+    .style.display="block";
+
+    drawEncyclopedia();
+});
+
+document.getElementById("closeBook")
+.addEventListener("click",()=>{
+
+    document.getElementById("encyclopedia")
+    .style.display="none";
+});
+
+function drawEncyclopedia(){
+
+    document.querySelectorAll(".monsterCanvas")
+    .forEach(c=>{
+
+        const cctx=c.getContext("2d");
+
+        let d=devicePixelRatio;
+
+        c.width=c.clientWidth*d;
+        c.height=c.clientHeight*d;
+
+        cctx.setTransform(d,0,0,d,0,0);
+
+        cctx.clearRect(
+            0,0,c.clientWidth,c.clientHeight
+        );
+
+        let type=c.dataset.monster;
+
+        let m={
+            type,
+            x:c.clientWidth/2,
+            y:c.clientHeight/2+10,
+            size:55,
+            rage:false
+        };
+
+        cctx.save();
+
+        cctx.translate(m.x,m.y);
+
+        // 这里直接使用游戏绘制函数
+        // 临时使用全局 ctx
+        cctx.restore();
+
+        drawMonsterToCanvas(c,type);
+    });
+}
+
+function drawMonsterToCanvas(c,type){
+
+    const cctx=c.getContext("2d");
+
+    let w=c.clientWidth;
+    let h=c.clientHeight;
+
+    cctx.clearRect(0,0,w,h);
+
+    cctx.save();
+
+    cctx.translate(w/2,h/2);
+
+    let s=55;
+
+    // 阴影
+    cctx.fillStyle="rgba(0,0,0,.4)";
+    cctx.beginPath();
+    cctx.ellipse(0,55,55,18,0,0,Math.PI*2);
+    cctx.fill();
+
+    // 为了让图鉴中的怪物单独显示
+    // 临时切换绘图函数使用的上下文
+    let old=window.ctx;
+    window.ctx=cctx;
+
+    let oldW=window.innerWidth;
+
+    let fake={
+        type,
+        size:s,
+        rage:false
     };
 
-    window.onload = () => {
-        init3DEngine();
-        renderMowerSelection();
-        updateMenuShowcaseVehicle();
-        requestAnimationFrame(gameLoop);
-    };
-    </script>
+    drawMonster(fake);
+
+    window.ctx=old;
+
+    cctx.restore();
+}
+
+// 初始怪物
+for(let i=0;i<8;i++){
+    randomMonster();
+}
+
+loop();
+</script>
+
 </body>
 </html>
