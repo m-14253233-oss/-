@@ -2,1187 +2,557 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0,
-      maximum-scale=1.0,user-scalable=no">
-
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>战车割草大作战</title>
-
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-*{
-    box-sizing:border-box;
-    margin:0;
-    padding:0;
-    user-select:none;
-}
-
-body{
-    background:#07111f;
-    color:white;
-    font-family:Arial,"Microsoft YaHei",sans-serif;
-    overflow:hidden;
-}
-
-#game{
-    display:block;
-    width:100vw;
-    height:100vh;
-    background:
-      radial-gradient(circle at center,#183d32,#07111f 75%);
-}
-
-#ui{
-    position:fixed;
-    top:12px;
-    left:12px;
-    right:12px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    z-index:10;
-    pointer-events:none;
-}
-
-.panel{
-    background:rgba(0,0,0,.62);
-    border:2px solid rgba(255,255,255,.2);
-    border-radius:14px;
-    padding:10px 14px;
-    backdrop-filter:blur(6px);
-}
-
-#title{
-    font-size:20px;
-    font-weight:bold;
-}
-
-#stats{
-    font-size:14px;
-    line-height:1.7;
-}
-
-button{
-    pointer-events:auto;
-    border:0;
-    border-radius:12px;
-    padding:10px 15px;
-    font-size:15px;
-    font-weight:bold;
-    color:white;
-    background:#1677ff;
-    cursor:pointer;
-}
-
-button:hover{
-    transform:scale(1.04);
-}
-
-#bookBtn{
-    background:#7b3cff;
-}
-
-#controls{
-    position:fixed;
-    bottom:18px;
-    left:50%;
-    transform:translateX(-50%);
-    z-index:20;
-    display:grid;
-    grid-template-columns:60px 60px 60px;
-    grid-template-rows:60px 60px;
-    gap:5px;
-}
-
-.control{
-    width:60px;
-    height:60px;
-    border-radius:18px;
-    background:rgba(255,255,255,.18);
-    border:2px solid rgba(255,255,255,.3);
-    font-size:25px;
-}
-
-.up{grid-column:2}
-.left{grid-column:1}
-.down{grid-column:2}
-.right{grid-column:3}
-
-#shootBtn{
-    position:fixed;
-    right:25px;
-    bottom:45px;
-    width:90px;
-    height:90px;
-    border-radius:50%;
-    background:#ff4b22;
-    border:4px solid rgba(255,255,255,.5);
-    z-index:20;
-}
-
-#encyclopedia{
-    display:none;
-    position:fixed;
-    inset:0;
-    z-index:100;
-    background:rgba(3,8,15,.96);
-    overflow:auto;
-    padding:25px;
-}
-
-#encyclopedia h1{
-    text-align:center;
-    margin-bottom:20px;
-}
-
-#closeBook{
-    position:fixed;
-    right:20px;
-    top:20px;
-    background:#e53935;
-}
-
-.monsters{
-    max-width:1100px;
-    margin:auto;
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-    gap:18px;
-}
-
-.card{
-    background:linear-gradient(145deg,#17283d,#0c1726);
-    border:2px solid rgba(255,255,255,.12);
-    border-radius:20px;
-    padding:18px;
-    box-shadow:0 10px 30px rgba(0,0,0,.3);
-}
-
-.monsterCanvas{
-    width:100%;
-    height:180px;
-    background:
-      radial-gradient(circle,#244d44,#0b1622);
-    border-radius:15px;
-    display:block;
-    margin-bottom:12px;
-}
-
-.card h2{
-    margin-bottom:7px;
-}
-
-.card p{
-    color:#cbd5e1;
-    line-height:1.6;
-    font-size:14px;
-}
-
-.tag{
-    display:inline-block;
-    margin-top:8px;
-    padding:5px 9px;
-    border-radius:8px;
-    background:#263d58;
-    font-size:12px;
-}
-
-#bossBar{
-    position:fixed;
-    top:90px;
-    left:50%;
-    transform:translateX(-50%);
-    width:min(500px,80vw);
-    display:none;
-    z-index:15;
-}
-
-#bossName{
-    text-align:center;
-    font-weight:bold;
-    margin-bottom:5px;
-}
-
-.bar{
-    height:15px;
-    background:#222;
-    border-radius:20px;
-    overflow:hidden;
-}
-
-#bossHP{
-    height:100%;
-    width:100%;
-    background:linear-gradient(90deg,#ff2d55,#ff9f00);
-}
-
-@media(max-width:600px){
-    #title{font-size:15px}
-    #stats{font-size:12px}
-    #bookBtn{padding:8px}
-}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#020617;color:#fff;font-family:Arial,"Microsoft YaHei",sans-serif}
+button{font-family:inherit}
+#game{position:fixed;inset:0}
+#game canvas{display:block}
+.glass{background:rgba(15,23,42,.78);backdrop-filter:blur(12px);border:1px solid rgba(148,163,184,.2)}
+#menu,#gameover,#pause,#book,#garage,#levelup{position:fixed;inset:0;z-index:20}
+.hidden{display:none!important}
+.card{background:rgba(15,23,42,.82);border:1px solid rgba(148,163,184,.2);border-radius:18px}
+.vehicle{transition:.2s;cursor:pointer}
+.vehicle:hover{transform:translateY(-3px);border-color:#38bdf8}
+.vehicle.selected{border-color:#22d3ee;box-shadow:0 0 25px rgba(34,211,238,.2)}
+#hud{position:fixed;top:0;left:0;right:0;z-index:10;pointer-events:none}
+.hudbox{background:rgba(2,6,23,.75);backdrop-filter:blur(10px);border:1px solid rgba(148,163,184,.18)}
+#joystick{position:fixed;left:25px;bottom:25px;width:125px;height:125px;border-radius:50%;z-index:15;background:rgba(30,41,59,.55);border:2px solid rgba(148,163,184,.35);touch-action:none}
+#stick{position:absolute;width:55px;height:55px;left:33px;top:33px;border-radius:50%;background:rgba(34,211,238,.65);border:2px solid rgba(255,255,255,.4)}
+#attackHint{position:fixed;right:20px;bottom:28px;z-index:12;pointer-events:none}
+.preview{height:105px;position:relative;overflow:hidden;border-radius:14px;background:linear-gradient(#0f172a,#020617)}
+::-webkit-scrollbar{width:7px}::-webkit-scrollbar-thumb{background:#334155;border-radius:10px}
 </style>
 </head>
-
 <body>
+<div id="game"></div>
 
-<canvas id="game"></canvas>
+<!-- HUD -->
+<div id="hud" class="hidden p-3">
+  <div class="max-w-5xl mx-auto flex flex-wrap gap-2 items-center">
+    <div class="hudbox rounded-xl px-3 py-2 text-xs min-w-[130px]">
+      <div class="flex justify-between"><span>等级</span><b id="level">1</b></div>
+      <div class="h-2 bg-slate-700 rounded mt-1"><div id="expbar" class="h-2 bg-cyan-400 rounded" style="width:0%"></div></div>
+    </div>
+    <div class="hudbox rounded-xl px-3 py-2 text-xs">⏱️ <b id="time">00:00</b></div>
+    <div class="hudbox rounded-xl px-3 py-2 text-xs">🌱 <b id="kills">0</b></div>
+    <div class="hudbox rounded-xl px-3 py-2 text-xs">🪙 <b id="coins">0</b></div>
+    <div class="hudbox rounded-xl px-3 py-2 text-xs">❤️ <b id="hp">100</b></div>
+    <button id="pauseBtn" class="pointer-events-auto ml-auto hudbox rounded-xl px-4 py-2 hover:bg-slate-700">Ⅱ</button>
+  </div>
+  <div id="bossBar" class="hidden max-w-xl mx-auto mt-2 hudbox rounded-xl p-2">
+    <div class="text-center text-red-300 text-xs font-black" id="bossName">BOSS</div>
+    <div class="h-3 bg-slate-800 rounded mt-1"><div id="bossHp" class="h-3 bg-red-500 rounded" style="width:100%"></div></div>
+  </div>
+</div>
 
-<div id="ui">
-
-    <div class="panel">
-        <div id="title">🌱 战车割草大作战</div>
-        <div id="stats">
-            ❤️ HP：<span id="hp">100</span>
-           　
-            💀 击杀：<span id="kills">0</span>
-           　
-            ⭐ 等级：<span id="level">1</span>
-        </div>
+<!-- MENU -->
+<div id="menu" class="flex items-center justify-center p-4 overflow-auto">
+  <div class="w-full max-w-5xl glass rounded-3xl p-5 md:p-8 shadow-2xl">
+    <div class="text-center">
+      <div class="text-cyan-400 text-xs font-black tracking-[.4em]">3D SURVIVAL</div>
+      <h1 class="text-4xl md:text-6xl font-black mt-2">战车割草大作战</h1>
+      <p class="text-slate-400 mt-2">驾驶战车，割掉变异草怪，成为草场最强王者！</p>
     </div>
 
-    <button id="bookBtn">📖 怪物图鉴</button>
-
-</div>
-
-<div id="bossBar">
-    <div id="bossName">👑 微观大魔王</div>
-    <div class="bar">
-        <div id="bossHP"></div>
+    <div class="mt-6 card p-4">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-black">🚗 选择战车</h2>
+        <span class="text-xs text-slate-500">金币：<b id="menuCoins">0</b></span>
+      </div>
+      <div id="vehicles" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
     </div>
-</div>
 
-<div id="controls">
-    <button class="control up" data-key="w">▲</button>
-    <button class="control left" data-key="a">◀</button>
-    <button class="control down" data-key="s">▼</button>
-    <button class="control right" data-key="d">▶</button>
-</div>
-
-<button id="shootBtn">⚡攻击</button>
-
-<div id="encyclopedia">
-
-    <button id="closeBook">✕ 关闭</button>
-
-    <h1>📖 怪物图鉴</h1>
-
-    <div class="monsters">
-
-        <div class="card">
-            <canvas class="monsterCanvas" data-monster="helmet"></canvas>
-            <h2>🪖 安全帽瓜瓜菌</h2>
-            <p>
-                头戴黄色安全帽、手持小铲子的绿色长条小怪物。
-                身体结实，防御力较高，是早期比较难处理的敌人。
-            </p>
-            <span class="tag">防御型</span>
-            <span class="tag">掉落：能量碎片 25%</span>
-        </div>
-
-        <div class="card">
-            <canvas class="monsterCanvas" data-monster="purple"></canvas>
-            <h2>💼 打工紫球菌</h2>
-            <p>
-                拎着小公文包的紫色小球菌。
-                它们通常成群结队出现，喜欢从四面八方包围战车。
-            </p>
-            <span class="tag">群攻型</span>
-            <span class="tag">掉落：金币 30%</span>
-        </div>
-
-        <div class="card">
-            <canvas class="monsterCanvas" data-monster="yellow"></canvas>
-            <h2>🟡 黄嘟嘟球菌</h2>
-            <p>
-                萌萌的黄色小球菌。
-                虽然单个实力不强，但是移动速度非常快，而且数量庞大。
-            </p>
-            <span class="tag">高速型</span>
-            <span class="tag">掉落：金币 20%</span>
-        </div>
-
-        <div class="card">
-            <canvas class="monsterCanvas" data-monster="blue"></canvas>
-            <h2>🌀 旋风蓝螺旋</h2>
-            <p>
-                像蓝色弹簧和旋风一样漂浮盘旋的神秘菌。
-                身形敏捷，很难被普通攻击命中。
-            </p>
-            <span class="tag">敏捷型</span>
-            <span class="tag">掉落：蓝能量 35%</span>
-        </div>
-
-        <div class="card">
-            <canvas class="monsterCanvas" data-monster="red"></canvas>
-            <h2>🔥 怒火红刺菌</h2>
-            <p>
-                橙红色的带刺小怪物。
-                受到攻击后会进入狂暴状态，速度明显提升。
-            </p>
-            <span class="tag">狂暴型</span>
-            <span class="tag">掉落：红能量 40%</span>
-        </div>
-
-        <div class="card">
-            <canvas class="monsterCanvas" data-monster="boss"></canvas>
-            <h2>👑 微观大魔王</h2>
-            <p>
-                巨型多核心母体细菌。
-                身体周围拥有炫彩能量光环，是整个战场最危险的敌人。
-            </p>
-            <span class="tag">BOSS</span>
-            <span class="tag">掉落：传奇核心 100%</span>
-        </div>
-
+    <div class="flex flex-col md:flex-row gap-3 justify-center mt-5">
+      <button id="startBtn" class="rounded-2xl px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-lg shadow-lg">🚜 出击割草</button>
+      <button id="garageBtn" class="rounded-2xl px-8 py-4 bg-slate-800 hover:bg-slate-700 font-black">🔧 零件改装升级</button>
+      <button id="bookBtn" class="rounded-2xl px-8 py-4 bg-purple-600 hover:bg-purple-500 font-black">📖 怪物图鉴</button>
     </div>
+  </div>
 </div>
+
+<!-- GARAGE -->
+<div id="garage" class="hidden flex items-center justify-center p-4">
+ <div class="glass rounded-3xl p-5 w-full max-w-2xl max-h-[90vh] overflow-auto">
+  <div class="flex justify-between items-center"><h2 class="text-2xl font-black">🔧 零件改装升级</h2><button onclick="closeGarage()" class="text-2xl">×</button></div>
+  <p class="text-slate-400 text-sm mt-1">升级零件会永久保存。</p>
+  <div id="parts" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4"></div>
+ </div>
+</div>
+
+<!-- BOOK -->
+<div id="book" class="hidden flex items-center justify-center p-3">
+ <div class="glass rounded-3xl p-5 w-full max-w-6xl max-h-[94vh] overflow-auto">
+  <div class="flex justify-between items-center">
+   <div><h2 class="text-2xl font-black">📖 怪物图鉴</h2><p class="text-slate-400 text-xs mt-1">六种原创怪物 + 原版BOSS</p></div>
+   <button onclick="closeBook()" class="text-2xl">×</button>
+  </div>
+  <div id="bookList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"></div>
+ </div>
+</div>
+
+<!-- LEVEL UP -->
+<div id="levelup" class="hidden flex items-center justify-center p-4">
+ <div class="glass rounded-3xl p-5 w-full max-w-2xl">
+  <h2 class="text-3xl font-black text-center">⬆️ 等级提升！</h2>
+  <p class="text-center text-slate-400 mt-1">选择一个强化</p>
+  <div id="skills" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5"></div>
+ </div>
+</div>
+
+<!-- PAUSE -->
+<div id="pause" class="hidden flex items-center justify-center p-4">
+ <div class="glass rounded-3xl p-8 text-center w-full max-w-sm">
+  <h2 class="text-3xl font-black">游戏暂停</h2>
+  <button id="resumeBtn" class="mt-5 w-full rounded-xl bg-cyan-500 text-slate-950 font-black py-3">继续游戏</button>
+  <button id="quitBtn" class="mt-3 w-full rounded-xl bg-slate-800 font-black py-3">回到主菜单</button>
+ </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="gameover" class="hidden flex items-center justify-center p-4">
+ <div class="glass rounded-3xl p-8 text-center w-full max-w-sm">
+  <div class="text-5xl">🌱💥</div>
+  <h2 class="text-3xl font-black mt-3">割草结束</h2>
+  <div class="mt-5 space-y-2 text-slate-300">
+   <div>生存时间：<b id="finalTime">00:00</b></div>
+   <div>割草量：<b id="finalKills">0</b></div>
+   <div>获得金币：<b id="finalCoins">0</b></div>
+  </div>
+  <button id="againBtn" class="mt-6 w-full rounded-xl bg-cyan-500 text-slate-950 font-black py-3">再来一局</button>
+  <button id="menuBtn" class="mt-3 w-full rounded-xl bg-slate-800 font-black py-3">主菜单</button>
+ </div>
+</div>
+
+<div id="joystick" class="hidden"><div id="stick"></div></div>
+<div id="attackHint" class="hidden text-xs text-slate-300 bg-slate-950/60 px-3 py-2 rounded-xl">自动攻击中 ⚔️</div>
 
 <script>
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
-
-let W,H;
-function resize(){
-    W=canvas.width=innerWidth*devicePixelRatio;
-    H=canvas.height=innerHeight*devicePixelRatio;
-    canvas.style.width=innerWidth+"px";
-    canvas.style.height=innerHeight+"px";
-    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
-}
-resize();
-addEventListener("resize",resize);
-
-const keys={w:false,a:false,s:false,d:false};
-
-let player={
-    x:innerWidth/2,
-    y:innerHeight/2,
-    hp:100,
-    speed:4,
-    angle:0
-};
-
-let bullets=[];
-let monsters=[];
-let particles=[];
-
-let kills=0;
-let level=1;
-let frame=0;
-
-const monsterTypes=[
-    {
-        type:"helmet",
-        name:"安全帽瓜瓜菌",
-        hp:55,
-        speed:0.7,
-        size:25
-    },
-    {
-        type:"purple",
-        name:"打工紫球菌",
-        hp:20,
-        speed:1.3,
-        size:18
-    },
-    {
-        type:"yellow",
-        name:"黄嘟嘟球菌",
-        hp:12,
-        speed:2.2,
-        size:15
-    },
-    {
-        type:"blue",
-        name:"旋风蓝螺旋",
-        hp:25,
-        speed:1.8,
-        size:19
-    },
-    {
-        type:"red",
-        name:"怒火红刺菌",
-        hp:35,
-        speed:1.2,
-        size:23
-    }
+/* =========================
+   基础资料
+========================= */
+const VEHICLES=[
+ {id:'aurora',name:'旋风极光1号',price:0,hp:130,speed:10.5,weapon:'环绕切刀',desc:'高速均衡型'},
+ {id:'crusher',name:'粉碎霸王车',price:200,hp:220,speed:8.8,weapon:'震荡波环',desc:'高血量重装型'},
+ {id:'speed',name:'疾光激光猎手',price:350,hp:95,speed:13.5,weapon:'高能激光',desc:'极限速度型'},
+ {id:'flamer',name:'烈焰焚草机',price:500,hp:160,speed:9.8,weapon:'高温喷火',desc:'范围攻击型'},
+ {id:'tesla',name:'特斯拉磁爆号',price:750,hp:140,speed:10.2,weapon:'高压电弧',desc:'连锁攻击型'},
+ {id:'quantum',name:'量子收割机',price:1000,hp:150,speed:11.8,weapon:'巡航无人机',desc:'自动追踪型'}
 ];
 
-function randomMonster(){
+const PARTS=[
+ {id:'engine',name:'引擎',desc:'提升移动速度',base:80},
+ {id:'blade',name:'切割器',desc:'提升攻击伤害',base:100},
+ {id:'armor',name:'装甲',desc:'提升最大生命',base:100},
+ {id:'magnet',name:'磁力器',desc:'扩大经验吸收范围',base:90},
+ {id:'cooler',name:'冷却器',desc:'提升攻击频率',base:120},
+ {id:'tires',name:'越野轮胎',desc:'提升加速能力',base:110}
+];
 
-    let t=
-      monsterTypes[
-        Math.floor(Math.random()*monsterTypes.length)
-      ];
+const MONSTERS={
+ safety:{
+  name:'安全帽瓜瓜菌',icon:'🪖',type:'高防御',hp:130,speed:3.2,damage:16,exp:6,drop:'25%',
+  desc:'绿色长身体的小怪物，戴着黄色安全帽，拿着小铲子，是非常耐打的工地菌。',color:0x22c55e
+ },
+ purple:{
+  name:'打工紫球菌',icon:'💼',type:'群体攻击',hp:38,speed:5.1,damage:9,exp:4,drop:'20%',
+  desc:'带着公文包的紫色圆球菌，喜欢三五成群地追赶战车。',color:0xa855f7
+ },
+ yellow:{
+  name:'黄嘟嘟球菌',icon:'🟡',type:'高速大量',hp:22,speed:9.2,damage:7,exp:3,drop:'15%',
+  desc:'小小的黄色圆球菌，速度极快，经常成群出现。',color:0xfacc15
+ },
+ blue:{
+  name:'旋风蓝螺旋',icon:'🌀',type:'灵活高速',hp:55,speed:8,damage:11,exp:7,drop:'30%',
+  desc:'蓝色螺旋浮空怪，移动路线飘忽不定，非常难追踪。',color:0x38bdf8
+ },
+ red:{
+  name:'怒火红刺菌',icon:'🔥',type:'受伤加速',hp:95,speed:4.3,damage:18,exp:10,drop:'35%',
+  desc:'橙红色尖刺怪，受到攻击后会暴怒并大幅提高速度。',color:0xf43f5e
+ },
+ micro:{
+  name:'微观大魔王',icon:'👑',type:'BOSS',hp:1800,speed:2.4,damage:32,exp:150,drop:'100%',
+  desc:'拥有多个核心的巨型母菌BOSS，周围环绕彩色能量光环，是菌群的王者。',color:0x8b5cf6
+ }
+};
 
-    let side=Math.floor(Math.random()*4);
+const save={
+ coins:0,selected:'aurora',unlocked:['aurora'],parts:{engine:0,blade:0,armor:0,magnet:0,cooler:0,tires:0},
+ kills:{safety:0,purple:0,yellow:0,blue:0,red:0,micro:0},best:0
+};
+try{
+ const s=JSON.parse(localStorage.getItem('mower_complete_v1')||'null');
+ if(s){Object.assign(save,s);save.parts=Object.assign(save.parts,s.parts||{});save.kills=Object.assign(save.kills,s.kills||{});}
+}catch(e){}
+function persist(){localStorage.setItem('mower_complete_v1',JSON.stringify(save));}
 
-    let x,y;
+/* =========================
+   Three.js
+========================= */
+let scene,camera,renderer,clock;
+let player,enemies=[],projectiles=[],gems=[],grass=[];
+let running=false,paused=false,gameTime=0,kills=0,coinsRun=0,level=1,exp=0,nextExp=30;
+let spawnTimer=0,shootTimer=0,bossTimer=0,microTimer=0;
+let joystick={x:0,y:0};
+const keys={};
 
-    if(side===0){
-        x=-50;
-        y=Math.random()*innerHeight;
-    }
+function init3D(){
+ scene=new THREE.Scene();
+ scene.background=new THREE.Color(0x07111f);
+ scene.fog=new THREE.Fog(0x07111f,45,125);
+ camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,250);
+ camera.position.set(0,18,18);
+ renderer=new THREE.WebGLRenderer({antialias:true});
+ renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+ renderer.setSize(innerWidth,innerHeight);
+ document.getElementById('game').appendChild(renderer.domElement);
+ clock=new THREE.Clock();
 
-    if(side===1){
-        x=innerWidth+50;
-        y=Math.random()*innerHeight;
-    }
+ scene.add(new THREE.HemisphereLight(0xbfe9ff,0x163b20,1.4));
+ const sun=new THREE.DirectionalLight(0xffffff,1.5);
+ sun.position.set(15,30,10);scene.add(sun);
 
-    if(side===2){
-        x=Math.random()*innerWidth;
-        y=-50;
-    }
+ const ground=new THREE.Mesh(new THREE.PlaneGeometry(180,180),new THREE.MeshStandardMaterial({color:0x173b25,roughness:1}));
+ ground.rotation.x=-Math.PI/2;scene.add(ground);
 
-    if(side===3){
-        x=Math.random()*innerWidth;
-        y=innerHeight+50;
-    }
+ const grid=new THREE.GridHelper(180,90,0x245c36,0x173f29);
+ grid.position.y=.015;scene.add(grid);
 
-    monsters.push({
-        ...t,
-        x,
-        y,
-        maxhp:t.hp,
-        rage:false
-    });
+ for(let i=0;i<500;i++) spawnGrass();
+ addDecor();
+ window.addEventListener('resize',resize);
+ requestAnimationFrame(loop);
+}
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}
+function spawnGrass(){
+ const m=new THREE.Mesh(new THREE.ConeGeometry(.08+Math.random()*.13,.35+Math.random()*.5,5),new THREE.MeshStandardMaterial({color:0x42a85f}));
+ m.position.set((Math.random()-.5)*170,.2,(Math.random()-.5)*170);
+ m.rotation.y=Math.random()*6.28;scene.add(m);grass.push(m);
+}
+function addDecor(){
+ for(let i=0;i<35;i++){
+  const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.4+Math.random()*.8),new THREE.MeshStandardMaterial({color:0x334155,roughness:1}));
+  rock.position.set((Math.random()-.5)*150,.35,(Math.random()-.5)*150);scene.add(rock);
+ }
+}
+function mat(c,em=0){return new THREE.MeshStandardMaterial({color:c,emissive:em,emissiveIntensity:em?1.2:0,roughness:.45,metalness:.25})}
+
+function vehicleModel(id){
+ const g=new THREE.Group();
+ const colors={aurora:0x38bdf8,crusher:0xef4444,speed:0x06b6d4,flamer:0xf97316,tesla:0xe2e8f0,quantum:0xc084fc};
+ const body=new THREE.Mesh(new THREE.BoxGeometry(2.2,.7,3.3),mat(colors[id]));
+ body.position.y=.7;g.add(body);
+ const cabin=new THREE.Mesh(new THREE.BoxGeometry(1.55,.55,1.35),mat(id==='tesla'?0x94a3b8:0x1e293b));
+ cabin.position.set(0,1.2,.1);g.add(cabin);
+ for(const x of [-1.05,1.05])for(const z of [-1.05,1.05]){
+  const w=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,.35,16),mat(0x111827));
+  w.rotation.z=Math.PI/2;w.position.set(x,.45,z);g.add(w);
+ }
+ const light=new THREE.Mesh(new THREE.BoxGeometry(1.3,.12,.12),mat(0xfef08a,0xfacc15));
+ light.position.set(0,.85,-1.7);g.add(light);
+ return g;
 }
 
-function spawnBoss(){
-
-    monsters.push({
-        type:"boss",
-        name:"微观大魔王",
-        x:innerWidth/2,
-        y:-120,
-        hp:1200,
-        maxhp:1200,
-        speed:.45,
-        size:75,
-        rage:false
-    });
-
-    document.getElementById("bossBar").style.display="block";
+class Player{
+ constructor(){
+  const v=VEHICLES.find(x=>x.id===save.selected)||VEHICLES[0];
+  this.data=v;this.maxHp=v.hp+save.parts.armor*18;this.hp=this.maxHp;
+  this.speed=v.speed+save.parts.engine*.55+save.parts.tires*.2;
+  this.damage=16+save.parts.blade*5;this.magnet=4+save.parts.magnet*.8;
+  this.fireRate=Math.max(.18,.65-save.parts.cooler*.055);
+  this.group=vehicleModel(v.id);scene.add(this.group);
+  this.group.position.set(0,0,0);
+ }
+ update(dt){
+  let x=joystick.x,y=joystick.y;
+  if(Math.abs(x)<.05&&Math.abs(y)<.05){
+   x=(keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0);
+   y=(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0);
+  }
+  const len=Math.hypot(x,y);if(len>1){x/=len;y/=len}
+  this.group.position.x+=x*this.speed*dt;
+  this.group.position.z+=y*this.speed*dt;
+  this.group.position.x=Math.max(-82,Math.min(82,this.group.position.x));
+  this.group.position.z=Math.max(-82,Math.min(82,this.group.position.z));
+  camera.position.lerp(new THREE.Vector3(this.group.position.x,18,this.group.position.z+18),.08);
+  camera.lookAt(this.group.position.x,0,this.group.position.z);
+ }
+ damagePlayer(n){this.hp-=n;if(this.hp<=0)endGame()}
 }
 
-function drawGrid(){
-
-    ctx.save();
-
-    ctx.translate(innerWidth/2,innerHeight/2);
-
-    /*
-       45° 等距视觉
-       两条基准轴分别向左下和右下延伸
-    */
-
-    const size=55;
-
-    for(let x=-1200;x<1200;x+=size){
-
-        ctx.beginPath();
-        ctx.moveTo(x,-900);
-        ctx.lineTo(x+900,0);
-        ctx.lineTo(x,900);
-        ctx.lineTo(x-900,0);
-        ctx.closePath();
-
-        ctx.strokeStyle="rgba(100,220,120,.08)";
-        ctx.stroke();
-    }
-
-    ctx.restore();
+class Enemy{
+ constructor(x,z,type){
+  this.type=type;this.dead=false;this.enraged=false;this.rage=0;
+  if(MONSTERS[type]){
+   const d=MONSTERS[type];this.data=d;this.maxHp=d.hp+gameTime*(type==='micro'?15:.5);this.hp=this.maxHp;this.speed=d.speed;this.damage=d.damage;this.exp=d.exp;this.radius=type==='micro'?2.8:.8;this.boss=type==='micro';
+  }else{
+   this.maxHp=type==='boss'?700+gameTime*18:type==='fast'?25+gameTime*.8:45+gameTime*1.2;
+   this.hp=this.maxHp;this.speed=type==='boss'?3.5:type==='fast'?7.5:4.8;this.damage=type==='boss'?25:type==='fast'?8:12;this.exp=type==='boss'?100:type==='fast'?6:3;this.radius=type==='boss'?2.2:type==='fast'?.7:.9;this.boss=type==='boss';
+  }
+  this.group=this.model();this.group.position.set(x,0,z);scene.add(this.group);
+ }
+ model(){
+  if(MONSTERS[this.type]){
+   const d=MONSTERS[this.type],g=new THREE.Group();
+   if(this.type==='safety'){
+    const b=new THREE.Mesh(new THREE.SphereGeometry(.85,16,12),mat(d.color));b.scale.set(1.3,.8,1);b.position.y=.9;g.add(b);
+    const h=new THREE.Mesh(new THREE.SphereGeometry(.68,16,10),mat(0xfacc15));h.scale.y=.55;h.position.y=1.65;g.add(h);
+    const brim=new THREE.Mesh(new THREE.BoxGeometry(1.45,.12,.65),mat(0xeab308));brim.position.y=1.5;g.add(brim);
+    const sh=new THREE.Mesh(new THREE.BoxGeometry(.12,.12,1.2),mat(0x94a3b8));sh.rotation.x=.8;sh.position.set(.75,.7,0);g.add(sh);
+   }else if(this.type==='purple'){
+    const b=new THREE.Mesh(new THREE.SphereGeometry(.72,18,14),mat(d.color));b.position.y=.8;g.add(b);
+    const bag=new THREE.Mesh(new THREE.BoxGeometry(.45,.55,.25),mat(0x312e81));bag.position.set(.65,.7,0);g.add(bag);
+   }else if(this.type==='yellow'){
+    const b=new THREE.Mesh(new THREE.SphereGeometry(.62,16,12),mat(d.color));b.position.y=.7;g.add(b);
+    const eye=mat(0x111827);for(const x of [-.2,.2]){let e=new THREE.Mesh(new THREE.SphereGeometry(.08,8,8),eye);e.position.set(x,.82,.56);g.add(e)}
+   }else if(this.type==='blue'){
+    const b=new THREE.Mesh(new THREE.TorusKnotGeometry(.62,.16,48,8,2,3),mat(0x38bdf8,0x0369a1));b.position.y=1.05;g.add(b);
+   }else if(this.type==='red'){
+    const b=new THREE.Mesh(new THREE.IcosahedronGeometry(.85,1),mat(d.color));b.position.y=.9;g.add(b);
+    for(let i=0;i<8;i++){let s=new THREE.Mesh(new THREE.ConeGeometry(.15,.7,6),mat(0xfb923c,0x7f1d1d));let a=i*Math.PI/4;s.position.set(Math.cos(a)*.8,.9,Math.sin(a)*.8);s.lookAt(s.position.x*2,s.position.y,s.position.z*2);g.add(s)}
+   }else{
+    const b=new THREE.Mesh(new THREE.IcosahedronGeometry(2.1,2),mat(0x7c3aed,0x7c3aed));b.position.y=2.3;g.add(b);
+    [0xff3b81,0x22d3ee,0xfacc15,0x4ade80].forEach((c,i)=>{let r=new THREE.Mesh(new THREE.TorusGeometry(2.6+i*.3,.08,10,48),new THREE.MeshBasicMaterial({color:c}));r.rotation.x=Math.PI/2+i*.35;r.rotation.z=i*.5;r.position.y=2.2;g.add(r)});
+    for(let i=0;i<3;i++){let e=new THREE.Mesh(new THREE.SphereGeometry(.2,10,10),new THREE.MeshBasicMaterial({color:0xffffff}));let a=i*Math.PI*2/3;e.position.set(Math.cos(a)*1.1,2.6,Math.sin(a)*1.1);g.add(e)}
+   }
+   return g;
+  }
+  const c=this.type==='boss'?0xef4444:this.type==='fast'?0xfacc15:0x22c55e;
+  const g=new THREE.Group(),b=new THREE.Mesh(new THREE.DodecahedronGeometry(this.radius),mat(c,this.type==='boss'?0x7f1d1d:0));b.position.y=this.radius;g.add(b);return g;
+ }
+ update(dt){
+  if(this.dead)return;
+  const dx=player.group.position.x-this.group.position.x,dz=player.group.position.z-this.group.position.z,d=Math.hypot(dx,dz);
+  if(this.type==='red'&&this.enraged)this.speed=7.5;
+  if(d>.1){this.group.position.x+=dx/d*this.speed*dt;this.group.position.z+=dz/d*this.speed*dt}
+  if(this.type==='blue'){this.group.rotation.y+=dt*5;this.group.position.y=1+Math.sin(gameTime*5+this.group.position.x)*.3}
+  if(this.type==='micro'){this.group.rotation.y+=dt*.6}
+  if(d<this.radius+1.3){player.damagePlayer(this.damage*dt)}
+ }
+ hit(dmg){
+  if(this.dead)return;
+  if(this.type==='red'&&!this.enraged){this.enraged=true;this.group.scale.set(1.15,1.15,1.15)}
+  this.hp-=dmg;
+  if(this.hp<=0)this.die();
+ }
+ die(){
+  if(this.dead)return;this.dead=true;kills++;
+  if(MONSTERS[this.type]){save.kills[this.type]++;persist()}
+  gainExp(this.exp);
+  if(Math.random()<(MONSTERS[this.type]?parseFloat(MONSTERS[this.type].drop)/100:(this.boss?1:.25))){
+   const n=this.boss?5:1+Math.floor(Math.random()*2);
+   for(let i=0;i<n;i++)spawnGem(this.group.position.x+(Math.random()-.5)*2,this.group.position.z+(Math.random()-.5)*2,'coin',this.boss?10:3);
+  }
+  spawnGem(this.group.position.x,this.group.position.z,'exp',this.exp);
+  scene.remove(this.group);
+ }
 }
 
-function drawPlayer(){
-
-    ctx.save();
-
-    ctx.translate(player.x,player.y);
-
-    ctx.rotate(-Math.PI/4);
-
-    // 战车阴影
-    ctx.fillStyle="rgba(0,0,0,.35)";
-    ctx.beginPath();
-    ctx.ellipse(0,15,38,20,0,0,Math.PI*2);
-    ctx.fill();
-
-    // 车身
-    ctx.fillStyle="#2f8cff";
-    ctx.fillRect(-30,-20,60,40);
-
-    // 装甲
-    ctx.fillStyle="#65b5ff";
-    ctx.fillRect(-22,-15,44,30);
-
-    // 炮台
-    ctx.fillStyle="#d9f2ff";
-    ctx.beginPath();
-    ctx.arc(0,0,14,0,Math.PI*2);
-    ctx.fill();
-
-    // 炮管
-    ctx.fillStyle="#9aa8b5";
-    ctx.fillRect(5,-5,35,10);
-
-    // 车轮
-    ctx.fillStyle="#111";
-    ctx.fillRect(-35,-25,12,12);
-    ctx.fillRect(23,-25,12,12);
-    ctx.fillRect(-35,13,12,12);
-    ctx.fillRect(23,13,12,12);
-
-    ctx.restore();
+class Projectile{
+ constructor(x,z,target,dmg,kind='bullet'){
+  this.target=target;this.dmg=dmg;this.kind=kind;this.dead=false;
+  this.mesh=new THREE.Mesh(kind==='laser'?new THREE.BoxGeometry(.12,.12,2):new THREE.SphereGeometry(.14,8,8),mat(kind==='laser'?0x22d3ee:0xfacc15,kind==='laser'?0x06b6d4:0));this.mesh.position.set(x,1,z);scene.add(this.mesh)
+ }
+ update(dt){
+  if(!this.target||this.target.dead){this.destroy();return}
+  const p=this.mesh.position,t=this.target.group.position;const dx=t.x-p.x,dz=t.z-p.z,d=Math.hypot(dx,dz);
+  if(d<.8){this.target.hit(this.dmg);this.destroy();return}
+  p.x+=dx/d*22*dt;p.z+=dz/d*22*dt;this.mesh.lookAt(t.x,1,t.z)
+ }
+ destroy(){if(!this.dead){this.dead=true;scene.remove(this.mesh)}}
 }
 
-function drawMonster(m){
-
-    ctx.save();
-    ctx.translate(m.x,m.y);
-
-    let s=m.size;
-
-    // 阴影
-    ctx.fillStyle="rgba(0,0,0,.3)";
-    ctx.beginPath();
-    ctx.ellipse(0,s*.65,s,s*.35,0,0,Math.PI*2);
-    ctx.fill();
-
-    if(m.type==="helmet"){
-        drawHelmet(s);
-    }
-
-    if(m.type==="purple"){
-        drawPurple(s);
-    }
-
-    if(m.type==="yellow"){
-        drawYellow(s);
-    }
-
-    if(m.type==="blue"){
-        drawBlue(s);
-    }
-
-    if(m.type==="red"){
-        drawRed(s,m);
-    }
-
-    if(m.type==="boss"){
-        drawBoss(s);
-    }
-
-    ctx.restore();
+function spawnGem(x,z,type,value){
+ const m=new THREE.Mesh(new THREE.OctahedronGeometry(.18),mat(type==='coin'?0xfacc15:0x22d3ee,type==='coin'?0xf59e0b:0x0891b2));
+ m.position.set(x,.45,z);m.userData={type,value};scene.add(m);gems.push(m);
+}
+function gainExp(v){
+ exp+=v;
+ while(exp>=nextExp){exp-=nextExp;level++;nextExp=Math.floor(nextExp*1.32);showLevelUp()}
+}
+function showLevelUp(){
+ paused=true;document.getElementById('levelup').classList.remove('hidden');
+ const pool=[
+  ['blade','⚔️ 切割强化','攻击伤害 +25%'],
+  ['speed','💨 引擎强化','移动速度 +10%'],
+  ['armor','🛡️ 装甲强化','最大生命 +25'],
+  ['magnet','🧲 磁力强化','经验吸收范围 +2'],
+  ['cooler','❄️ 冷却强化','攻击速度提高']
+ ];
+ const chosen=[...pool].sort(()=>Math.random()-.5).slice(0,3);
+ const box=document.getElementById('skills');box.innerHTML='';
+ chosen.forEach(s=>{const b=document.createElement('button');b.className='card p-4 text-left hover:border-cyan-400';b.innerHTML='<b>'+s[1]+'</b><div class="text-xs text-slate-400 mt-1">'+s[2]+'</div>';b.onclick=()=>{if(s[0]==='blade')player.damage*=1.25;if(s[0]==='speed')player.speed*=1.1;if(s[0]==='armor'){player.maxHp+=25;player.hp+=25}if(s[0]==='magnet')player.magnet+=2;if(s[0]==='cooler')player.fireRate*=.85;document.getElementById('levelup').classList.add('hidden');paused=false};box.appendChild(b)})
 }
 
-function eyes(){
-    ctx.fillStyle="#111";
-
-    ctx.beginPath();
-    ctx.arc(-5,-2,3,0,Math.PI*2);
-    ctx.arc(5,-2,3,0,Math.PI*2);
-    ctx.fill();
+/* =========================
+   生成
+========================= */
+function spawnEnemy(type){
+ const a=Math.random()*Math.PI*2,d=28+Math.random()*10;
+ enemies.push(new Enemy(player.group.position.x+Math.cos(a)*d,player.group.position.z+Math.sin(a)*d,type));
+}
+function spawnBoss(type){
+ spawnEnemy(type);
+ document.getElementById('bossBar').classList.remove('hidden');
+ document.getElementById('bossName').textContent=type==='micro'?'微观大魔王':'变异巨霸草王';
+}
+function spawnWave(){
+ const r=Math.random();
+ if(r<.18){for(let i=0;i<4;i++)spawnEnemy('purple')}
+ else if(r<.45){for(let i=0;i<3;i++)spawnEnemy('yellow')}
+ else if(r<.62)spawnEnemy('safety');
+ else if(r<.79)spawnEnemy('blue');
+ else if(r<.91)spawnEnemy('red');
+ else spawnEnemy(Math.random()<.35?'fast':'normal');
 }
 
-function drawHelmet(s){
-
-    ctx.fillStyle="#35a853";
-    ctx.fillRect(-s*.55,-s*.9,s*1.1,s*1.7);
-
-    ctx.fillStyle="#55c96b";
-    ctx.fillRect(-s*.45,-s*.75,s*.9,s*.55);
-
-    // 安全帽
-    ctx.fillStyle="#ffd21c";
-    ctx.beginPath();
-    ctx.arc(0,-s*.75,s*.65,Math.PI,0);
-    ctx.fill();
-
-    ctx.fillRect(-s*.72,-s*.75,s*1.44,7);
-
-    eyes();
-
-    // 小铲子
-    ctx.strokeStyle="#9a6b3a";
-    ctx.lineWidth=5;
-    ctx.beginPath();
-    ctx.moveTo(s*.65,-2);
-    ctx.lineTo(s*1.3,s*.7);
-    ctx.stroke();
-
-    ctx.fillStyle="#aaa";
-    ctx.beginPath();
-    ctx.moveTo(s*1.25,s*.65);
-    ctx.lineTo(s*1.55,s*.8);
-    ctx.lineTo(s*1.25,s*1);
-    ctx.closePath();
-    ctx.fill();
+/* =========================
+   游戏循环
+========================= */
+function updateHUD(){
+ document.getElementById('level').textContent=level;
+ document.getElementById('expbar').style.width=(exp/nextExp*100)+'%';
+ document.getElementById('time').textContent=formatTime(gameTime);
+ document.getElementById('kills').textContent=kills;
+ document.getElementById('coins').textContent=save.coins+coinsRun;
+ document.getElementById('hp').textContent=Math.max(0,Math.ceil(player.hp));
+ const boss=enemies.find(e=>e.boss&&!e.dead);
+ if(boss){document.getElementById('bossBar').classList.remove('hidden');document.getElementById('bossHp').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';document.getElementById('bossName').textContent=boss.type==='micro'?'微观大魔王':'变异巨霸草王'}
+ else document.getElementById('bossBar').classList.add('hidden');
 }
-
-function drawPurple(s){
-
-    let grad=ctx.createRadialGradient(
-        -s*.3,-s*.3,2,
-        0,0,s
-    );
-
-    grad.addColorStop(0,"#e6b7ff");
-    grad.addColorStop(.45,"#a855f7");
-    grad.addColorStop(1,"#5b21b6");
-
-    ctx.fillStyle=grad;
-    ctx.beginPath();
-    ctx.arc(0,0,s,0,Math.PI*2);
-    ctx.fill();
-
-    eyes();
-
-    // 公文包
-    ctx.fillStyle="#4b2a63";
-    ctx.fillRect(s*.7,0,s*.7,s*.5);
-
-    ctx.strokeStyle="#e6c07b";
-    ctx.lineWidth=2;
-    ctx.strokeRect(s*.8,s*.05,s*.5,s*.35);
+function formatTime(t){let m=Math.floor(t/60),s=Math.floor(t%60);return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
+function gameUpdate(dt){
+ if(!running||paused)return;
+ gameTime+=dt;spawnTimer+=dt;shootTimer+=dt;bossTimer+=dt;microTimer+=dt;
+ player.update(dt);
+ if(spawnTimer>Math.max(.35,1.25-gameTime*.006)){spawnTimer=0;spawnWave()}
+ if(bossTimer>90){bossTimer=0;spawnBoss('boss')}
+ if(microTimer>120){microTimer=0;spawnBoss('micro')}
+ if(shootTimer>player.fireRate){
+  shootTimer=0;
+  let target=enemies.filter(e=>!e.dead).sort((a,b)=>a.group.position.distanceTo(player.group.position)-b.group.position.distanceTo(player.group.position))[0];
+  if(target&&target.group.position.distanceTo(player.group.position)<24){
+   projectiles.push(new Projectile(player.group.position.x,player.group.position.z,target,player.damage,player.data.id==='speed'||player.data.id==='tesla'?'laser':'bullet'));
+  }
+ }
+ enemies.forEach(e=>e.update(dt));
+ projectiles.forEach(p=>p.update(dt));
+ gems.forEach(g=>{
+  const dx=player.group.position.x-g.position.x,dz=player.group.position.z-g.position.z,d=Math.hypot(dx,dz);
+  if(d<player.magnet){g.position.x+=dx*dt*6;g.position.z+=dz*dt*6}
+  if(d<1){if(g.userData.type==='coin')coinsRun+=g.userData.value;else gainExp(g.userData.value);scene.remove(g);g.userData.dead=true}
+ });
+ enemies=enemies.filter(e=>!e.dead);
+ projectiles=projectiles.filter(p=>!p.dead);
+ gems=gems.filter(g=>!g.userData.dead);
+ updateHUD();
 }
-
-function drawYellow(s){
-
-    ctx.fillStyle="#ffe34d";
-    ctx.beginPath();
-    ctx.arc(0,0,s,0,Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle="#fff4a3";
-    ctx.beginPath();
-    ctx.arc(-s*.35,-s*.35,s*.25,0,Math.PI*2);
-    ctx.fill();
-
-    eyes();
-}
-
-function drawBlue(s){
-
-    ctx.strokeStyle="#42c8ff";
-    ctx.lineWidth=6;
-
-    ctx.beginPath();
-
-    for(let i=0;i<18;i++){
-
-        let a=i*.7;
-        let r=s*(i/18);
-
-        let x=Math.cos(a)*r;
-        let y=Math.sin(a)*r;
-
-        if(i===0) ctx.moveTo(x,y);
-        else ctx.lineTo(x,y);
-    }
-
-    ctx.stroke();
-
-    ctx.fillStyle="#8de8ff";
-    ctx.beginPath();
-    ctx.arc(0,0,5,0,Math.PI*2);
-    ctx.fill();
-}
-
-function drawRed(s,m){
-
-    ctx.fillStyle=m.rage?"#ff4b16":"#ef5b2a";
-
-    ctx.beginPath();
-    ctx.arc(0,0,s,0,Math.PI*2);
-    ctx.fill();
-
-    // 刺
-    ctx.strokeStyle="#ffb000";
-    ctx.lineWidth=4;
-
-    for(let i=0;i<8;i++){
-
-        let a=i*Math.PI/4;
-
-        ctx.beginPath();
-        ctx.moveTo(
-            Math.cos(a)*s*.8,
-            Math.sin(a)*s*.8
-        );
-
-        ctx.lineTo(
-            Math.cos(a)*s*1.35,
-            Math.sin(a)*s*1.35
-        );
-
-        ctx.stroke();
-    }
-
-    eyes();
-}
-
-function drawBoss(s){
-
-    // 彩色光环
-    let grad=ctx.createRadialGradient(
-        0,0,10,
-        0,0,s*1.7
-    );
-
-    grad.addColorStop(0,"rgba(255,255,255,.8)");
-    grad.addColorStop(.25,"rgba(255,0,255,.45)");
-    grad.addColorStop(.5,"rgba(0,220,255,.35)");
-    grad.addColorStop(1,"rgba(120,0,255,0)");
-
-    ctx.fillStyle=grad;
-
-    ctx.beginPath();
-    ctx.arc(0,0,s*1.7,0,Math.PI*2);
-    ctx.fill();
-
-    // 母体
-    let body=ctx.createRadialGradient(
-        -s*.3,-s*.4,5,
-        0,0,s
-    );
-
-    body.addColorStop(0,"#ffdf7e");
-    body.addColorStop(.35,"#ff4fd8");
-    body.addColorStop(.7,"#753cff");
-    body.addColorStop(1,"#27136b");
-
-    ctx.fillStyle=body;
-
-    ctx.beginPath();
-    ctx.arc(0,0,s,0,Math.PI*2);
-    ctx.fill();
-
-    // 多核心
-    for(let i=0;i<5;i++){
-
-        let a=i*Math.PI*2/5;
-        let x=Math.cos(a)*s*.42;
-        let y=Math.sin(a)*s*.42;
-
-        ctx.fillStyle="#70faff";
-
-        ctx.beginPath();
-        ctx.arc(x,y,s*.13,0,Math.PI*2);
-        ctx.fill();
-    }
-
-    eyes();
-}
-
-function shoot(){
-
-    let nearest=null;
-    let dist=Infinity;
-
-    for(const m of monsters){
-
-        let dx=m.x-player.x;
-        let dy=m.y-player.y;
-        let d=Math.hypot(dx,dy);
-
-        if(d<dist){
-            dist=d;
-            nearest=m;
-        }
-    }
-
-    let angle=nearest
-        ?Math.atan2(nearest.y-player.y,nearest.x-player.x)
-        :player.angle;
-
-    bullets.push({
-        x:player.x,
-        y:player.y,
-        vx:Math.cos(angle)*10,
-        vy:Math.sin(angle)*10,
-        life:80,
-        damage:25
-    });
-}
-
-function update(){
-
-    frame++;
-
-    let dx=0;
-    let dy=0;
-
-    if(keys.w)dy-=1;
-    if(keys.s)dy+=1;
-    if(keys.a)dx-=1;
-    if(keys.d)dx+=1;
-
-    if(dx||dy){
-
-        let len=Math.hypot(dx,dy);
-
-        dx/=len;
-        dy/=len;
-
-        player.x+=dx*player.speed;
-        player.y+=dy*player.speed;
-
-        player.angle=Math.atan2(dy,dx);
-    }
-
-    player.x=Math.max(35,Math.min(innerWidth-35,player.x));
-    player.y=Math.max(35,Math.min(innerHeight-35,player.y));
-
-    // 子弹
-    for(let i=bullets.length-1;i>=0;i--){
-
-        let b=bullets[i];
-
-        b.x+=b.vx;
-        b.y+=b.vy;
-        b.life--;
-
-        let hit=false;
-
-        for(let j=monsters.length-1;j>=0;j--){
-
-            let m=monsters[j];
-
-            if(Math.hypot(b.x-m.x,b.y-m.y)<m.size){
-
-                m.hp-=b.damage;
-                hit=true;
-
-                createParticles(m.x,m.y);
-
-                if(m.type==="red" && m.hp<m.maxhp*.6){
-                    m.rage=true;
-                    m.speed=2.4;
-                }
-
-                if(m.hp<=0){
-
-                    kills++;
-
-                    if(m.type==="boss"){
-                        document.getElementById("bossBar")
-                        .style.display="none";
-
-                        alert("🎉 恭喜！你击败了微观大魔王！");
-                    }
-
-                    monsters.splice(j,1);
-
-                    if(kills%10===0){
-                        level++;
-                        player.speed+=.3;
-                    }
-                }
-
-                break;
-            }
-        }
-
-        if(hit || b.life<=0){
-            bullets.splice(i,1);
-        }
-    }
-
-    // 怪物
-    for(const m of monsters){
-
-        let dx=player.x-m.x;
-        let dy=player.y-m.y;
-
-        let d=Math.hypot(dx,dy);
-
-        if(d>1){
-
-            m.x+=dx/d*m.speed;
-            m.y+=dy/d*m.speed;
-        }
-
-        if(d<m.size+25){
-
-            player.hp-=0.08;
-
-            if(player.hp<=0){
-
-                player.hp=100;
-                kills=0;
-                level=1;
-                monsters=[];
-                alert("💥 战车被摧毁了！");
-            }
-        }
-    }
-
-    // 定时生成
-    if(frame%45===0){
-        randomMonster();
-    }
-
-    // BOSS
-    if(kills>=30 &&
-       !monsters.some(m=>m.type==="boss")){
-        spawnBoss();
-    }
-
-    if(monsters.some(m=>m.type==="boss")){
-
-        let boss=monsters.find(m=>m.type==="boss");
-
-        document.getElementById("bossHP")
-        .style.width=
-        Math.max(0,boss.hp/boss.maxhp*100)+"%";
-    }
-
-    // 粒子
-    for(let i=particles.length-1;i>=0;i--){
-
-        let p=particles[i];
-
-        p.x+=p.vx;
-        p.y+=p.vy;
-
-        p.life--;
-
-        if(p.life<=0){
-            particles.splice(i,1);
-        }
-    }
-
-    document.getElementById("hp").textContent=
-      Math.max(0,Math.floor(player.hp));
-
-    document.getElementById("kills").textContent=kills;
-
-    document.getElementById("level").textContent=level;
-}
-
-function createParticles(x,y){
-
-    for(let i=0;i<8;i++){
-
-        particles.push({
-            x,
-            y,
-            vx:(Math.random()-.5)*4,
-            vy:(Math.random()-.5)*4,
-            life:30
-        });
-    }
-}
-
-function draw(){
-
-    ctx.clearRect(0,0,innerWidth,innerHeight);
-
-    drawGrid();
-
-    // 草
-    for(let i=0;i<70;i++){
-
-        let x=(i*137)%innerWidth;
-        let y=(i*83)%innerHeight;
-
-        ctx.strokeStyle="rgba(100,220,100,.35)";
-        ctx.beginPath();
-        ctx.moveTo(x,y);
-        ctx.lineTo(x+3,y-8);
-        ctx.stroke();
-    }
-
-    // 子弹
-    for(const b of bullets){
-
-        ctx.fillStyle="#fff36b";
-
-        ctx.shadowBlur=15;
-        ctx.shadowColor="#00eaff";
-
-        ctx.beginPath();
-        ctx.arc(b.x,b.y,5,0,Math.PI*2);
-        ctx.fill();
-
-        ctx.shadowBlur=0;
-    }
-
-    for(const p of particles){
-
-        ctx.fillStyle="rgba(100,255,150,"+
-          Math.max(0,p.life/30)+")";
-
-        ctx.beginPath();
-        ctx.arc(p.x,p.y,3,0,Math.PI*2);
-        ctx.fill();
-    }
-
-    for(const m of monsters){
-        drawMonster(m);
-    }
-
-    drawPlayer();
-}
-
 function loop(){
-
-    update();
-    draw();
-
-    requestAnimationFrame(loop);
+ requestAnimationFrame(loop);
+ const dt=Math.min(.05,clock?clock.getDelta():.016);
+ gameUpdate(dt);
+ renderer.render(scene,camera);
 }
 
-document.addEventListener("keydown",e=>{
-
-    let k=e.key.toLowerCase();
-
-    if(k in keys){
-        keys[k]=true;
-    }
-
-    if(e.code==="Space"){
-        shoot();
-    }
-});
-
-document.addEventListener("keyup",e=>{
-
-    let k=e.key.toLowerCase();
-
-    if(k in keys){
-        keys[k]=false;
-    }
-});
-
-// 手机按钮
-document.querySelectorAll(".control")
-.forEach(btn=>{
-
-    const key=btn.dataset.key;
-
-    btn.addEventListener("pointerdown",()=>{
-        keys[key]=true;
-    });
-
-    btn.addEventListener("pointerup",()=>{
-        keys[key]=false;
-    });
-
-    btn.addEventListener("pointerleave",()=>{
-        keys[key]=false;
-    });
-});
-
-document.getElementById("shootBtn")
-.addEventListener("pointerdown",shoot);
-
-// 图鉴
-document.getElementById("bookBtn")
-.addEventListener("click",()=>{
-
-    document.getElementById("encyclopedia")
-    .style.display="block";
-
-    drawEncyclopedia();
-});
-
-document.getElementById("closeBook")
-.addEventListener("click",()=>{
-
-    document.getElementById("encyclopedia")
-    .style.display="none";
-});
-
-function drawEncyclopedia(){
-
-    document.querySelectorAll(".monsterCanvas")
-    .forEach(c=>{
-
-        const cctx=c.getContext("2d");
-
-        let d=devicePixelRatio;
-
-        c.width=c.clientWidth*d;
-        c.height=c.clientHeight*d;
-
-        cctx.setTransform(d,0,0,d,0,0);
-
-        cctx.clearRect(
-            0,0,c.clientWidth,c.clientHeight
-        );
-
-        let type=c.dataset.monster;
-
-        let m={
-            type,
-            x:c.clientWidth/2,
-            y:c.clientHeight/2+10,
-            size:55,
-            rage:false
-        };
-
-        cctx.save();
-
-        cctx.translate(m.x,m.y);
-
-        // 这里直接使用游戏绘制函数
-        // 临时使用全局 ctx
-        cctx.restore();
-
-        drawMonsterToCanvas(c,type);
-    });
+/* =========================
+   UI
+========================= */
+function renderVehicles(){
+ const box=document.getElementById('vehicles');box.innerHTML='';
+ VEHICLES.forEach(v=>{
+  const unlocked=save.unlocked.includes(v.id),sel=save.selected===v.id;
+  const b=document.createElement('div');b.className='vehicle card p-3 '+(sel?'selected':'');
+  b.innerHTML='<div class="preview flex items-center justify-center"><div class="text-5xl">🚗</div></div><b>'+v.name+'</b><div class="text-[11px] text-cyan-400">'+v.weapon+'</div><div class="text-[10px] text-slate-400">'+v.desc+'</div><div class="text-xs mt-2">'+(unlocked?'已解锁':'🪙 '+v.price)+'</div>';
+  b.onclick=()=>{
+   if(unlocked){save.selected=v.id;persist();renderVehicles()}
+   else if(save.coins>=v.price){save.coins-=v.price;save.unlocked.push(v.id);save.selected=v.id;persist();renderVehicles()}
+   else alert('金币不够！');
+  };
+  box.appendChild(b);
+ });
+ document.getElementById('menuCoins').textContent=save.coins;
+}
+function renderParts(){
+ const box=document.getElementById('parts');box.innerHTML='';
+ PARTS.forEach(p=>{
+  const lv=save.parts[p.id]||0,cost=p.base*(lv+1);
+  const b=document.createElement('button');b.className='card p-4 text-left hover:border-cyan-400';
+  b.innerHTML='<div class="flex justify-between"><b>'+p.name+'</b><span class="text-cyan-400">Lv.'+lv+'</span></div><div class="text-xs text-slate-400 mt-1">'+p.desc+'</div><div class="text-xs mt-3">升级：🪙 '+cost+'</div>';
+  b.onclick=()=>{if(save.coins>=cost){save.coins-=cost;save.parts[p.id]=lv+1;persist();renderParts();renderVehicles()}else alert('金币不够！')};
+  box.appendChild(b);
+ });
+}
+function renderBook(){
+ const box=document.getElementById('bookList');box.innerHTML='';
+ const list=[...Object.entries(MONSTERS),['oldboss',{name:'变异巨霸草王',icon:'👹',type:'原版BOSS',hp:700,speed:3.5,damage:25,exp:100,drop:'100%',desc:'原版游戏保留的巨型草王BOSS。',color:0xef4444}]];
+ list.forEach(([id,m])=>{
+  const k=save.kills[id]||0;
+  const b=document.createElement('div');b.className='card p-4';
+  b.innerHTML='<div class="preview flex items-center justify-center"><div class="text-6xl">'+m.icon+'</div></div><div class="flex justify-between mt-3"><b>'+m.name+'</b><span class="text-xs '+(m.type.includes('BOSS')?'text-red-400':'text-cyan-400')+'">'+m.type+'</span></div><p class="text-xs text-slate-400 mt-2 leading-relaxed">'+m.desc+'</p><div class="grid grid-cols-2 gap-2 mt-3 text-xs"><div class="bg-slate-900 rounded-lg p-2">生命<br><b>'+Math.round(m.hp)+'</b></div><div class="bg-slate-900 rounded-lg p-2">速度<br><b>'+m.speed+'</b></div><div class="bg-slate-900 rounded-lg p-2">击杀<br><b class="text-emerald-400">'+k+'</b></div><div class="bg-slate-900 rounded-lg p-2">掉落<br><b class="text-yellow-400">'+m.drop+'</b></div></div>';
+  box.appendChild(b);
+ });
+}
+function closeGarage(){document.getElementById('garage').classList.add('hidden')}
+function closeBook(){document.getElementById('book').classList.add('hidden')}
+function clearWorld(){
+ enemies.forEach(e=>scene.remove(e.group));projectiles.forEach(p=>scene.remove(p.mesh));gems.forEach(g=>scene.remove(g));
+ enemies=[];projectiles=[];gems=[];
 }
 
-function drawMonsterToCanvas(c,type){
-
-    const cctx=c.getContext("2d");
-
-    let w=c.clientWidth;
-    let h=c.clientHeight;
-
-    cctx.clearRect(0,0,w,h);
-
-    cctx.save();
-
-    cctx.translate(w/2,h/2);
-
-    let s=55;
-
-    // 阴影
-    cctx.fillStyle="rgba(0,0,0,.4)";
-    cctx.beginPath();
-    cctx.ellipse(0,55,55,18,0,0,Math.PI*2);
-    cctx.fill();
-
-    // 为了让图鉴中的怪物单独显示
-    // 临时切换绘图函数使用的上下文
-    let old=window.ctx;
-    window.ctx=cctx;
-
-    let oldW=window.innerWidth;
-
-    let fake={
-        type,
-        size:s,
-        rage:false
-    };
-
-    drawMonster(fake);
-
-    window.ctx=old;
-
-    cctx.restore();
+/* =========================
+   游戏开始/结束
+========================= */
+function startGame(){
+ clearWorld();running=true;paused=false;gameTime=0;kills=0;coinsRun=0;level=1;exp=0;nextExp=30;spawnTimer=shootTimer=bossTimer=microTimer=0;
+ if(player)scene.remove(player.group);player=new Player();
+ document.getElementById('menu').classList.add('hidden');
+ document.getElementById('gameover').classList.add('hidden');
+ document.getElementById('pause').classList.add('hidden');
+ document.getElementById('hud').classList.remove('hidden');
+ document.getElementById('joystick').classList.remove('hidden');
+ document.getElementById('attackHint').classList.remove('hidden');
 }
-
-// 初始怪物
-for(let i=0;i<8;i++){
-    randomMonster();
+function endGame(){
+ if(!running)return;
+ running=false;paused=false;
+ save.coins+=coinsRun;save.best=Math.max(save.best,kills);persist();
+ document.getElementById('finalTime').textContent=formatTime(gameTime);
+ document.getElementById('finalKills').textContent=kills;
+ document.getElementById('finalCoins').textContent=coinsRun;
+ document.getElementById('gameover').classList.remove('hidden');
+ document.getElementById('hud').classList.add('hidden');document.getElementById('joystick').classList.add('hidden');document.getElementById('attackHint').classList.add('hidden');
 }
+document.getElementById('startBtn').onclick=startGame;
+document.getElementById('againBtn').onclick=startGame;
+document.getElementById('menuBtn').onclick=()=>{document.getElementById('gameover').classList.add('hidden');document.getElementById('menu').classList.remove('hidden');renderVehicles()};
+document.getElementById('garageBtn').onclick=()=>{renderParts();document.getElementById('garage').classList.remove('hidden')};
+document.getElementById('bookBtn').onclick=()=>{renderBook();document.getElementById('book').classList.remove('hidden')};
+document.getElementById('pauseBtn').onclick=()=>{if(running){paused=true;document.getElementById('pause').classList.remove('hidden')}};
+document.getElementById('resumeBtn').onclick=()=>{paused=false;document.getElementById('pause').classList.add('hidden')};
+document.getElementById('quitBtn').onclick=()=>{paused=false;running=false;document.getElementById('pause').classList.add('hidden');document.getElementById('hud').classList.add('hidden');document.getElementById('joystick').classList.add('hidden');document.getElementById('menu').classList.remove('hidden');renderVehicles()};
 
-loop();
+window.addEventListener('keydown',e=>{keys[e.key]=true;if(e.key==='Escape'&&running){paused=!paused;document.getElementById('pause').classList.toggle('hidden',!paused)}});
+window.addEventListener('keyup',e=>keys[e.key]=false);
+
+/* 摇杆 */
+const joy=document.getElementById('joystick'),stick=document.getElementById('stick');
+function joyMove(e){
+ const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+ const p=e.touches?e.touches[0]:e;let dx=p.clientX-cx,dy=p.clientY-cy,max=42,d=Math.hypot(dx,dy);
+ if(d>max){dx=dx/d*max;dy=dy/d*max}
+ joystick.x=dx/max;joystick.y=dy/max;stick.style.transform=`translate(${dx}px,${dy}px)`;
+}
+function joyEnd(){joystick.x=0;joystick.y=0;stick.style.transform='translate(0,0)'}
+joy.addEventListener('touchstart',e=>{e.preventDefault();joyMove(e)},{passive:false});
+joy.addEventListener('touchmove',e=>{e.preventDefault();joyMove(e)},{passive:false});
+joy.addEventListener('touchend',joyEnd);
+
+/* 初始化 */
+init3D();renderVehicles();persist();
 </script>
-
 </body>
 </html>
